@@ -53,6 +53,8 @@ Windows x64 安装包构建：
 
 安装文件输出到 `desktop/dist/SignalWeb-Setup-0.1.2-x64.exe`。安装向导提供欢迎页、安装范围、安装位置、“创建桌面快捷方式”复选框、安装进度和完成页。运行环境随安装包提供，终端用户无需安装 Node.js、Python 或开发依赖。
 
+macOS 测试包由 GitHub Actions 的 Mac 构建机生成，下载方法见 [macOS 云端构建](docs/18-MACOS-CLOUD-BUILD.md)。
+
 应用程序安装目录与用户数据分开。配置和日报保存在用户数据目录，升级不会覆盖用户配置。构建和验证说明见 [Windows 安装包](docs/16-WINDOWS-INSTALLER.md)。
 
 设置页的“立即运行一次”会在页面顶部显示抓取阶段和百分比。Windows 后台运行使用 `pythonw.exe`，不会弹出控制台窗口；macOS/Linux 同样以无窗口子进程运行。
