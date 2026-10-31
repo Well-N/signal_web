@@ -145,7 +145,9 @@ async function startServer() {
   } else {
     packagedPipelineDir = prepareInstalledData();
     const standaloneDir = webDir;
-    const python = path.join(process.resourcesPath, "python", "python.exe");
+    const python = process.platform === "darwin"
+      ? path.join(process.resourcesPath, "python", "signalweb-runner", "signalweb-runner")
+      : path.join(process.resourcesPath, "python", "python.exe");
     if (!existsSync(python) || !existsSync(path.join(standaloneDir, "server.js"))) {
       throw new Error("安装文件不完整，请重新安装织讯。");
     }
@@ -159,7 +161,9 @@ async function startServer() {
         HOSTNAME: "127.0.0.1",
         PORT: String(port),
         SIGNALWEB_PIPELINE_DIR: packagedPipelineDir,
-        SIGNALWEB_PYTHON: python,
+        ...(process.platform === "darwin"
+          ? { SIGNALWEB_RUNNER: python }
+          : { SIGNALWEB_PYTHON: python }),
         SIGNALWEB_DATA_DIR: path.join(packagedPipelineDir, "data", "export"),
         SIGNALWEB_DEMO: "0",
       },

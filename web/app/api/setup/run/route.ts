@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { runnerCommand } from "@/lib/runner-command";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,7 +32,8 @@ function pythonBackgroundExecutable() {
 
 export async function POST() {
   const root = pipelineDir();
-  const child = spawn(/*turbopackIgnore: true*/ pythonBackgroundExecutable(), [path.join(root, "scripts", "signalweb_runner.py"), "run"], {
+  const runner = runnerCommand(root, "run", pythonBackgroundExecutable());
+  const child = spawn(/*turbopackIgnore: true*/ runner.executable, runner.args, {
     cwd: root,
     env: {
       ...process.env,

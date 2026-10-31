@@ -7,6 +7,7 @@
     "dev": "electron .",
     "start": "electron .",
     "dist:win": "node scripts/package-win.cjs",
+    "dist:mac": "node scripts/package-mac.cjs",
     "pack:win": "electron-builder --win --dir",
     "test:package": "node scripts/smoke-package.cjs"
   },
@@ -68,6 +69,11 @@
           ]
         }
       ]
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "identity": "-",
+      "artifactName": "SignalWeb-${version}-mac-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

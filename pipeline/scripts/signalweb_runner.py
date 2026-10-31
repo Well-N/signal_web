@@ -75,7 +75,10 @@ if hasattr(sys.stdout, "reconfigure"):
 
 def pipeline_root() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).resolve().parent
+        configured = os.environ.get("SIGNALWEB_PIPELINE_DIR")
+        if not configured:
+            raise RuntimeError("打包运行器缺少 SIGNALWEB_PIPELINE_DIR")
+        return Path(configured).resolve()
     return Path(__file__).resolve().parent.parent
 
 
@@ -369,9 +372,11 @@ def register_windows_task(daily_time: str) -> dict[str, Any]:
 
 
 def launch_agent_xml(daily_time: str) -> str:
+    from xml.sax.saxutils import escape
+
     hour, minute = daily_time.split(":")
     command_items = "".join(
-        "        <string>" + item.replace("&", "&amp;").replace("<", "&lt;") + "</string>\n"
+        "        <string>" + escape(item) + "</string>\n"
         for item in runner_command()
     )
     return (
@@ -386,6 +391,11 @@ def launch_agent_xml(daily_time: str) -> str:
         "    <array>\n"
         + command_items
         + "    </array>\n"
+        "    <key>EnvironmentVariables</key>\n"
+        "    <dict>\n"
+        "        <key>SIGNALWEB_PIPELINE_DIR</key>\n"
+        "        <string>" + escape(str(ROOT)) + "</string>\n"
+        "    </dict>\n"
         "    <key>StartCalendarInterval</key>\n"
         "    <dict>\n"
         "        <key>Hour</key>\n"
@@ -394,11 +404,11 @@ def launch_agent_xml(daily_time: str) -> str:
         "        <integer>" + minute + "</integer>\n"
         "    </dict>\n"
         "    <key>WorkingDirectory</key>\n"
-        "    <string>" + str(ROOT) + "</string>\n"
+        "    <string>" + escape(str(ROOT)) + "</string>\n"
         "    <key>StandardOutPath</key>\n"
-        "    <string>" + str(CONFIG_DIR / "daily.out.log") + "</string>\n"
+        "    <string>" + escape(str(CONFIG_DIR / "daily.out.log")) + "</string>\n"
         "    <key>StandardErrorPath</key>\n"
-        "    <string>" + str(CONFIG_DIR / "daily.err.log") + "</string>\n"
+        "    <string>" + escape(str(CONFIG_DIR / "daily.err.log")) + "</string>\n"
         "</dict>\n"
         "</plist>\n"
     )
