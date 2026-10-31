@@ -1,0 +1,285 @@
+{
+  "ai": {
+    "provider": "openai",
+    "model": "${LLM_MODEL}",
+    "base_url": "${LLM_BASE_URL}",
+    "api_key_env": "LLM_API_KEY",
+    "temperature": 0.3,
+    "max_tokens": 4096,
+    "throttle_sec": 0,
+    "analysis_concurrency": 4,
+    "enrichment_concurrency": 3,
+    "languages": [
+      "zh"
+    ]
+  },
+  "processing": {
+    "profiles_dir": "profiles",
+    "default_profile": "ai-news",
+    "profile_settings": {
+      "ai-news": {
+        "threshold": 6,
+        "topic_dedup": true
+      },
+      "finance-news": {
+        "threshold": 6,
+        "topic_dedup": true
+      },
+      "world-news": {
+        "threshold": 6,
+        "topic_dedup": true
+      },
+      "solopreneur": {
+        "threshold": 6,
+        "topic_dedup": true
+      },
+      "cross-border": {
+        "threshold": 6,
+        "topic_dedup": true
+      }
+    }
+  },
+  "display": {
+    "icon_style": "emoji"
+  },
+  "sources": {
+    "github": [],
+    "hackernews": {
+      "enabled": true,
+      "fetch_top_stories": 30,
+      "min_score": 50,
+      "profile": "ai-news"
+    },
+    "rss": [
+      {
+        "name": "Simon Willison",
+        "url": "https://simonwillison.net/atom/everything/",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "vLLM Blog",
+        "url": "https://vllm.ai/blog/rss.xml",
+        "enabled": true,
+        "category": "tooling",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
+        "enabled": true,
+        "category": "tooling",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "TechCrunch AI",
+        "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "The Verge AI",
+        "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "MarkTechPost",
+        "url": "https://www.marktechpost.com/feed/",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "OpenAI News",
+        "url": "https://openai.com/news/rss.xml",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "Google AI Blog",
+        "url": "https://blog.google/technology/ai/rss/",
+        "enabled": true,
+        "category": "ai-news",
+        "profile": "ai-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "BBC World",
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "enabled": true,
+        "category": "world-news",
+        "profile": "world-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "Al Jazeera",
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "enabled": true,
+        "category": "world-news",
+        "profile": "world-news",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "Google News 财经",
+        "url": "https://news.google.com/rss/search?q=stock+market+OR+Federal+Reserve+OR+earnings&hl=en-US&gl=US&ceid=US%3Aen",
+        "enabled": true,
+        "profile": "finance-news",
+        "category": "finance-news"
+      },
+      {
+        "name": "YC Blog",
+        "url": "https://www.ycombinator.com/blog/rss",
+        "enabled": true,
+        "category": "solopreneur",
+        "profile": "solopreneur",
+        "content_extractor": "trafilatura",
+        "max_items": 3
+      },
+      {
+        "name": "Google News 跨境",
+        "url": "https://news.google.com/rss/search?q=Trending+Products+OR+Viral+Products+OR+Trending+Consumer+Products+OR+Viral+Gadgets+OR+Best-Selling+Products+OR+Best+Sellers+OR+Trending+Items+OR+Hot+Selling+Products+OR+Emerging+Product+Trends+OR+New+Product+Trends+OR+Fast-Moving+Consumer+Goods+OR+Winning+Products+OR+TikTok+Made+Me+Buy+It+OR+TikTok+Viral+Products+OR+TikTok+Shop+Best+Sellers+OR+Amazon+Best+Sellers+OR+Amazon+Product+Trends+OR+Temu+Best+Sellers+OR+Temu+Trending+Products+OR+AliExpress+Best+Sellers+OR+Shopify+Trending+Products+OR+Cross-Border+E-Commerce+OR+Cross-Border+E-Commerce+Trends+OR+E-Commerce+Product+Trends+OR+Consumer+Demand+Trends+OR+Product+Sourcing+OR+Wholesale+Products+OR+Small+Commodity+Exports+OR+Low-Cost+High-Demand+Products+OR+Seasonal+Products+OR+Product+Market+Research+OR+Yiwu+OR+Yiwu+Market&hl=en-US&gl=US&ceid=US%3Aen",
+        "enabled": true,
+        "category": "cross-border",
+        "profile": "cross-border",
+        "content_extractor": "trafilatura",
+        "max_items": 8
+      },
+      {
+        "name": "Google News 创业",
+        "url": "https://news.google.com/rss/search?q=solopreneur+OR+indie+hacker+OR+one-person+business&hl=en-US&gl=US&ceid=US%3Aen",
+        "enabled": true,
+        "category": "solopreneur",
+        "profile": "solopreneur",
+        "content_extractor": "trafilatura",
+        "max_items": 8
+      },
+      {
+        "name": "Modern Retail",
+        "url": "https://www.modernretail.co/feed/",
+        "enabled": true,
+        "category": "cross-border",
+        "profile": "cross-border",
+        "content_extractor": "trafilatura",
+        "max_items": 6
+      },
+      {
+        "name": "SaaStr",
+        "url": "https://www.saastr.com/feed/",
+        "enabled": true,
+        "category": "solopreneur",
+        "profile": "solopreneur",
+        "content_extractor": "trafilatura",
+        "max_items": 6
+      },
+      {
+        "name": "Product Hunt",
+        "url": "https://www.producthunt.com/feed",
+        "enabled": true,
+        "category": "solopreneur",
+        "profile": "solopreneur",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "HN Show",
+        "url": "https://hnrss.org/show",
+        "enabled": true,
+        "category": "solopreneur",
+        "profile": "solopreneur",
+        "content_extractor": "trafilatura",
+        "max_items": 10
+      },
+      {
+        "name": "Google News 世界大事",
+        "url": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US%3Aen&q=Major+Geopolitical+Shift+OR+Escalation+of+Conflict+OR+International+Security+Crisis+OR+Major+Policy+Announcement+OR+Regime+Change+OR+Coup+d%27%C3%A9tat+OR+Unexpected+Election+Result+OR+Major+Diplomatic+Breakthrough+OR+New+Economic+Sanctions+OR+Major+Trade+Agreement+OR+Global+Financial+Instability+OR+Systemic+Banking+Crisis+OR+Sovereign+Default+OR+Emergency+Rate+Cut+OR+Emergency+Rate+Hike+OR+Major+Oil+Supply+Shock+OR+Global+Energy+Shortage+OR+Major+Natural+Disaster+OR+International+Public+Health+Emergency+OR+Critical+Infrastructure+Disruption+OR+Nuclear+Escalation+OR+Major+Cyberattack+OR+Global+Supply+Chain+Crisis",
+        "enabled": true,
+        "category": "world-news",
+        "profile": "world-news",
+        "content_extractor": "trafilatura",
+        "max_items": 8
+      }
+    ],
+    "reddit": {
+      "enabled": false,
+      "subreddits": [],
+      "users": [],
+      "fetch_comments": 0
+    },
+    "twitter": {
+      "enabled": false,
+      "users": [],
+      "keywords": [],
+      "fetch_limit": 0,
+      "fetch_reply_text": false,
+      "max_replies_per_tweet": 0,
+      "max_tweets_to_expand": 0,
+      "reply_min_likes": 0,
+      "profile": "ai-news"
+    },
+    "openbb": {
+      "enabled": false,
+      "fetch_filings": false,
+      "filings_provider": "sec",
+      "watchlists": []
+    },
+    "ossinsight": {
+      "enabled": false,
+      "period": "past_24_hours",
+      "languages": [
+        "All"
+      ],
+      "keywords": [],
+      "min_stars": 10,
+      "max_items": 20,
+      "profile": "ai-news"
+    },
+    "telegram": {
+      "enabled": false,
+      "channels": []
+    },
+    "gdelt": {
+      "enabled": false,
+      "query": "artificial intelligence",
+      "mode": "ArtList",
+      "max_records": 75,
+      "timespan": null,
+      "language": null,
+      "country": null,
+      "category": "ai-news",
+      "profile": "ai-news"
+    },
+    "google_news": {
+      "enabled": true,
+      "query": "artificial intelligence OR OpenAI OR Anthropic OR LLM",
+      "language": "en",
+      "country": "US",
+      "ceid": null,
+      "max_results": 30,
+      "category": "ai-news",
+      "profile": "ai-news",
+      "content_extractor": "trafilatura"
+    }
+  }
+}

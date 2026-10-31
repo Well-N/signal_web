@@ -1,0 +1,55 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html { scrollbar-color: var(--scroll-thumb-cobalt) var(--scroll-track-cobalt); scroll-padding-top: var(--space-3xl); }
+html:has(.app-shell--warm) { scrollbar-color: var(--scroll-thumb-warm) var(--scroll-track-warm); }
+html:has(.app-shell--warm)[data-theme="dark"] { scrollbar-color: var(--scroll-thumb-dark) var(--scroll-track-dark); }
+body {
+  margin: 0;
+  background: var(--cobalt);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  caret-color: var(--paper);
+}
+::selection { background: #fbfbf6; color: #07143e; }
+::-moz-selection { background: #fbfbf6; color: #07143e; }
+.app-shell--warm ::selection { background: #1028f5; color: #fbfbf6; }
+.app-shell--warm ::-moz-selection { background: #1028f5; color: #fbfbf6; }
+html[data-theme="dark"] .app-shell--warm ::selection { background: #dbe4ff; color: #1b1a18; }
+html[data-theme="dark"] .app-shell--warm ::-moz-selection { background: #dbe4ff; color: #1b1a18; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.16em; }
+h1, h2, h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-synthesis: none;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.04;
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
+}
+h1 { max-width: 22ch; font-size: var(--text-3xl); }
+h2 { max-width: 32ch; font-size: var(--text-2xl); }
+h3 { max-width: 44ch; font-size: var(--text-lg); line-height: 1.2; }
+p { margin: 0; text-wrap: pretty; }
+p:not([class]) { max-width: 65ch; }
+img, video { max-width: 100%; height: auto; display: block; }
+svg { display: block; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.container { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--gutter); box-sizing: border-box; }
+.num, .figure, td.num { font-variant-numeric: tabular-nums; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

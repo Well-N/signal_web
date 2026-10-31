@@ -1,0 +1,290 @@
+@theme static {
+  --color-field: #1028f5;
+  --color-field-deep: #07135f;
+  --color-field-mid: #0b1fbd;
+  --color-marble: #f2f0e7;
+  --color-paper-white: #fbfbf6;
+  --color-mist: #dbe4ff;
+  --color-ink: #07143e;
+  --font-display: var(--font-bodoni), "Bodoni Moda", "Songti SC", "STSong", serif;
+  --font-body: var(--font-ibm-plex), "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-outlier: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* palette */
+  --cobalt: #1028f5;
+  --cobalt-mid: #0b1fbd;
+  --cobalt-deep: #07135f;
+  --marble: #f2f0e7;
+  --paper: #fbfbf6;
+  --mist: #dbe4ff;
+  --ink: #07143e;
+
+  /* lines and washes on the cobalt field */
+  --line: rgba(251, 251, 246, 0.24);
+  --line-strong: rgba(251, 251, 246, 0.58);
+  --line-faint: rgba(251, 251, 246, 0.12);
+  --wash: rgba(251, 251, 246, 0.08);
+  --wash-strong: rgba(251, 251, 246, 0.16);
+  --text-dim: rgba(219, 228, 255, 0.68);
+  --text-dimmer: rgba(219, 228, 255, 0.5);
+  --field-veil: rgba(16, 40, 245, 0.86);
+  --well: rgba(7, 19, 95, 0.62);
+  --well-solid: rgba(7, 19, 95, 0.96);
+  --shade: rgba(7, 19, 95, 0.34);
+
+  /* lines and washes on marble */
+  --line-ink: rgba(7, 20, 62, 0.16);
+  --line-ink-strong: rgba(7, 20, 62, 0.38);
+  --ink-dim: rgba(7, 20, 62, 0.64);
+  --ink-dimmer: rgba(7, 20, 62, 0.48);
+  --wash-ink: rgba(7, 20, 62, 0.05);
+
+  --error: #ffb3a7;
+  --wall-glow: rgba(255, 255, 255, 0.055);
+  --wall-vignette: rgba(3, 8, 45, 0.22);
+  --wall-highlight: rgba(255, 255, 255, 0.03);
+  --wall-hover-halo: rgba(8, 17, 102, 0.95);
+  --wall-hover-halo-soft: rgba(8, 17, 102, 1);
+  --grid-ink: #14213d;
+  --grid-blue: #2337d8;
+  --grid-red: #d92d20;
+  --darkroom-bg: #17120f;
+  --darkroom-ink: #f2e9dc;
+  --darkroom-amber: #f0a23c;
+  --atelier-paper: #f3ede4;
+  --atelier-ink: #2d241e;
+  --atelier-rule: #d8ccbd;
+  --atelier-slate: #6d7488;
+  --riso-paper: #fbf7ee;
+  --riso-blue: #2543b8;
+  --riso-pink: #ff2f92;
+  --node-soft: #8ea2ff;
+  --scroll-thumb-cobalt: rgba(251, 251, 246, 0.34);
+  --scroll-track-cobalt: #1028f5;
+  --scroll-thumb-warm: rgba(43, 39, 35, 0.26);
+  --scroll-track-warm: #f7f2e9;
+  --scroll-thumb-dark: rgba(240, 233, 221, 0.32);
+  --scroll-track-dark: #1b1a18;
+  --error-ink: #8f2415;
+  --success: #bdeecb;
+  --success-ink: #125c31;
+  --focus: #dbe4ff;
+  --focus-ink: #1028f5;
+  --mask-solid: #000;
+
+  /* type */
+  --font-display: var(--font-bodoni), "Bodoni Moda", "Songti SC", "STSong", serif;
+  --font-body: var(--font-ibm-plex), "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-outlier: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 0.95rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-hero: clamp(2.4rem, 4.5vw, 4.35rem);
+  --tracking-display: -0.045em;
+  --display-weight: 400;
+
+  /* space */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+  --space-4xl: 128px;
+
+  /* frame */
+  --container: 1440px;
+  --gutter: clamp(20px, 4vw, 56px);
+  --gap-columns: 32px;
+  --rule-hair: 1px;
+  --radius-input: 2px;
+  --radius-card: 2px;
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* z */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky-nav: 300;
+  --z-modal: 400;
+
+
+  /* warm paper surfaces for every screen except the brief */
+  --warm-paper: #f7f2e9;
+  --warm-panel: #fffcf6;
+  --warm-ink: #2b2723;
+  --warm-ink-2: rgba(43, 39, 35, 0.72);
+  --warm-ink-3: rgba(43, 39, 35, 0.52);
+  --warm-line: rgba(43, 39, 35, 0.13);
+  --warm-line-strong: rgba(43, 39, 35, 0.26);
+  --warm-wash: rgba(43, 39, 35, 0.05);
+  --warm-well: #efe7d9;
+  --warm-veil: rgba(247, 242, 233, 0.92);
+  --warm-graph-soft: #a39786;
+  --ink-hover: #1c1916;
+
+  --header-bg: var(--cobalt);
+
+  /* surface defaults: the cobalt field */
+  --text: var(--paper);
+  --text-2: var(--mist);
+  --text-3: var(--text-dim);
+  --rule: var(--line);
+  --rule-strong: var(--line-strong);
+  --btn-face: transparent;
+  --btn-text: var(--paper);
+  --btn-edge: var(--line-strong);
+  --hover-wash: var(--wash-strong);
+  --btn-primary-face: var(--paper);
+  --btn-primary-text: var(--cobalt-deep);
+  --btn-primary-hover: var(--mist);
+  --focus-ring: var(--focus);
+}
+
+.surface-cobalt {
+  --text: var(--paper);
+  --text-2: var(--mist);
+  --text-3: var(--text-dim);
+  --rule: var(--line);
+  --rule-strong: var(--line-strong);
+  --btn-face: transparent;
+  --btn-text: var(--paper);
+  --btn-edge: var(--line-strong);
+  --hover-wash: var(--wash-strong);
+  --btn-primary-face: var(--paper);
+  --btn-primary-text: var(--cobalt-deep);
+  --btn-primary-hover: var(--mist);
+  --focus-ring: var(--focus);
+}
+
+.surface-marble {
+  color-scheme: light;
+  --text: var(--ink);
+  --text-2: var(--ink-dim);
+  --text-3: var(--ink-dimmer);
+  --rule: var(--line-ink);
+  --rule-strong: var(--line-ink-strong);
+  --btn-face: var(--paper);
+  --btn-text: var(--ink);
+  --btn-edge: var(--line-ink-strong);
+  --hover-wash: var(--wash-ink);
+  --btn-primary-face: var(--ink);
+  --btn-primary-text: var(--paper);
+  --btn-primary-hover: var(--cobalt-deep);
+  --focus-ring: var(--focus-ink);
+}
+
+.app-shell {
+  --panel: var(--marble);
+  --well-bg: var(--cobalt-deep);
+  --graph-node: var(--paper);
+  --graph-node-soft: var(--node-soft);
+  --graph-link: var(--line-strong);
+  --graph-text: var(--text-dim);
+}
+
+.app-shell.app-shell--warm {
+  background: var(--warm-paper);
+  color: var(--warm-ink);
+  color-scheme: light;
+  --text: var(--warm-ink);
+  --text-2: var(--warm-ink-2);
+  --text-3: var(--warm-ink-3);
+  --rule: var(--warm-line);
+  --rule-strong: var(--warm-line-strong);
+  --field-veil: var(--warm-veil);
+  --hover-wash: var(--warm-wash);
+  --btn-face: transparent;
+  --btn-text: var(--warm-ink);
+  --btn-edge: var(--warm-line-strong);
+  --btn-primary-face: var(--warm-ink);
+  --btn-primary-text: var(--warm-paper);
+  --btn-primary-hover: var(--ink-hover);
+  --focus-ring: var(--cobalt);
+  --header-bg: var(--warm-paper);
+  --panel: var(--warm-panel);
+  --well-bg: var(--warm-well);
+  --well-solid: var(--warm-panel);
+  --graph-node: var(--warm-ink);
+  --graph-node-soft: var(--warm-graph-soft);
+  --graph-link: var(--warm-line-strong);
+  --graph-text: var(--warm-ink-3);
+}
+
+html[data-theme="dark"] .app-shell.app-shell--warm {
+  background: #1b1a18;
+  color: #f0e9dd;
+  color-scheme: dark;
+  --text: #f0e9dd;
+  --text-2: rgba(240, 233, 221, 0.72);
+  --text-3: rgba(240, 233, 221, 0.5);
+  --rule: rgba(240, 233, 221, 0.16);
+  --rule-strong: rgba(240, 233, 221, 0.34);
+  --header-bg: #1b1a18;
+  --field-veil: rgba(27, 26, 24, 0.94);
+  --hover-wash: rgba(240, 233, 221, 0.07);
+  --btn-face: transparent;
+  --btn-text: #f0e9dd;
+  --btn-edge: rgba(240, 233, 221, 0.34);
+  --btn-primary-face: #f0e9dd;
+  --btn-primary-text: #1b1a18;
+  --btn-primary-hover: #fffaf0;
+  --focus-ring: #dbe4ff;
+  --panel: #232120;
+  --well-bg: #141312;
+  --well-solid: #232120;
+  --graph-node: #f0e9dd;
+  --graph-node-soft: #8a7f70;
+  --graph-link: rgba(240, 233, 221, 0.34);
+  --graph-text: rgba(240, 233, 221, 0.5);
+}
+
+html[data-theme="dark"] .app-shell--warm .surface-marble,
+html[data-theme="dark"] .app-shell--warm .setup-sheet,
+html[data-theme="dark"] .app-shell--warm .article-body,
+html[data-theme="dark"] .app-shell--warm .empty-state {
+  background: var(--panel);
+  color: #f0e9dd;
+  color-scheme: dark;
+  --text: #f0e9dd;
+  --text-2: rgba(240, 233, 221, 0.72);
+  --text-3: rgba(240, 233, 221, 0.5);
+  --rule: rgba(240, 233, 221, 0.16);
+  --rule-strong: rgba(240, 233, 221, 0.34);
+  --line-ink: rgba(240, 233, 221, 0.16);
+  --line-ink-strong: rgba(240, 233, 221, 0.34);
+  --ink: #f0e9dd;
+  --ink-dim: rgba(240, 233, 221, 0.66);
+  --ink-dimmer: rgba(240, 233, 221, 0.5);
+  --wash-ink: rgba(240, 233, 221, 0.06);
+  --btn-face: rgba(240, 233, 221, 0.08);
+  --btn-text: #f0e9dd;
+  --btn-edge: rgba(240, 233, 221, 0.34);
+  --hover-wash: rgba(240, 233, 221, 0.14);
+  --btn-primary-face: #f0e9dd;
+  --btn-primary-text: #1b1a18;
+  --btn-primary-hover: #fffaf0;
+}
+
+html[data-theme="dark"] .app-shell--warm .field {
+  background: #2b2927;
+  border-color: rgba(240, 233, 221, 0.3);
+  color: #f0e9dd;
+}
+
+html[data-theme="dark"] .app-shell--warm .field::placeholder {
+  color: rgba(240, 233, 221, 0.4);
+}

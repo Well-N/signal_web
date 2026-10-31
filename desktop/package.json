@@ -1,0 +1,92 @@
+{
+  "name": "signalweb-desktop",
+  "version": "0.1.3",
+  "description": "织讯 SignalWeb desktop shell",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "dist:win": "node scripts/package-win.cjs",
+    "pack:win": "electron-builder --win --dir",
+    "test:package": "node scripts/smoke-package.cjs"
+  },
+  "author": "SignalWeb",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.signalweb.desktop",
+    "productName": "SignalWeb",
+    "executableName": "SignalWeb",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "staging/web",
+        "to": "web",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "staging/pipeline",
+        "to": "pipeline",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "staging/python",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "staging/web/node_modules",
+        "to": "web/node_modules",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "selectPerMachineByDefault": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "unicode": true,
+      "installerLanguages": [
+        "zh_CN"
+      ],
+      "language": "2052",
+      "displayLanguageSelector": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SignalWeb",
+      "runAfterFinish": true,
+      "include": "build/installer.nsh",
+      "artifactName": "SignalWeb-Setup-${version}-${arch}.${ext}"
+    }
+  }
+}

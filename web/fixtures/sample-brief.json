@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "is_sample": true,
+  "date": "2026-10-27",
+  "language": "zh",
+  "generated_at": "2026-10-27T08:00:00+08:00",
+  "headline": "今天的 AI 信号：Agent 工具链、推理成本与开源模型",
+  "summary_markdown": "# AI 信号日报 · 2026-10-27\n\n今天的主线是 Agent 工具链继续补齐、推理成本被重新审视，以及开源模型工具链的更新。\n\n## 今日 Top 3\n\n1. Agent 工具链更新\n2. 推理缓存论文\n3. 开源多模态模型\n",
+  "sections": [
+    {
+      "id": "top3",
+      "title": "今日 Top 3",
+      "story_ids": ["rss:openai:1", "rss:arxiv:1", "rss:hf:1"]
+    },
+    {
+      "id": "profile:ai-news",
+      "title": "AI 动态",
+      "story_ids": ["rss:openai:1", "rss:arxiv:1", "rss:hf:1", "rss:anthropic:1", "hn:agents:1", "google:policy:1"]
+    }
+  ],
+  "stories": [
+    {
+      "id": "rss:openai:1",
+      "title": "OpenAI 发布面向 Agent 的新工具链",
+      "url": "https://example.com/openai-agents",
+      "source": "Example Feed",
+      "source_type": "rss",
+      "author": "Example Team",
+      "published_at": "2026-10-27T01:20:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "ai-news",
+      "profile": "ai-news",
+      "score": 9.1,
+      "reason": "官方发布、工具链影响面广，并给出了可验证的 API 变化。",
+      "one_liner": "Agent 的多步调用、工具权限和调试信息被整合进一套新接口。",
+      "tags": ["agents", "openai", "tooling"],
+      "artifact": {
+        "language": "zh",
+        "title": "Agent 工具链更新",
+        "blocks": [
+          {
+            "id": "summary",
+            "title": "摘要",
+            "content": "新的工具链接口把多步任务、工具调用权限和调试记录整合到一处。公告给出了接口示例，但实际可用性仍需在开发者环境中验证。",
+            "primary": true
+          },
+          {
+            "id": "impact",
+            "title": "为什么重要",
+            "content": "它降低了构建多步 Agent 时的胶水代码量，也让工具调用失败更容易定位。对已有 Agent 框架的迁移成本取决于旧接口的兼容范围。",
+            "primary": false
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"feed_name": "Example Feed", "category": "ai-news"}
+    },
+    {
+      "id": "rss:arxiv:1",
+      "title": "arXiv 新论文提出更便宜的推理缓存方法",
+      "url": "https://example.com/arxiv-cache",
+      "source": "arXiv cs.AI",
+      "source_type": "rss",
+      "author": "Research Team",
+      "published_at": "2026-10-27T00:40:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "research",
+      "profile": "ai-news",
+      "score": 8.3,
+      "reason": "论文报告了可复现实验和基线对比，但尚未看到独立复现。",
+      "one_liner": "作者用分层缓存减少重复注意力计算，并报告了不同上下文长度下的成本变化。",
+      "tags": ["research", "inference", "cache"],
+      "artifact": {
+        "language": "zh",
+        "title": "推理缓存论文",
+        "blocks": [
+          {
+            "id": "summary",
+            "title": "摘要",
+            "content": "论文提出一种分层缓存策略，目标是在长上下文场景下减少重复计算。摘要给出了实验设置和基线，但独立复现仍然缺失。",
+            "primary": true
+          },
+          {
+            "id": "context",
+            "title": "背景",
+            "content": "长上下文推理的主要成本来自注意力计算和缓存读写。论文的贡献在于把缓存按访问频率分层，而不是简单地扩大显存。",
+            "primary": false
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"feed_name": "arXiv cs.AI", "category": "research"}
+    },
+    {
+      "id": "rss:hf:1",
+      "title": "Hugging Face 开源小型多模态模型",
+      "url": "https://example.com/hf-model",
+      "source": "Hugging Face Blog",
+      "source_type": "rss",
+      "author": "Hugging Face",
+      "published_at": "2026-10-26T22:10:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "tooling",
+      "profile": "ai-news",
+      "score": 7.9,
+      "reason": "模型和推理代码同时开放，提供了清晰的试用入口。",
+      "one_liner": "新模型强调小尺寸和图文输入，附带推理示例与显存占用说明。",
+      "tags": ["open-source", "multimodal", "model"],
+      "artifact": {
+        "language": "zh",
+        "title": "开源多模态模型",
+        "blocks": [
+          {
+            "id": "summary",
+            "title": "摘要",
+            "content": "团队开放了一个小型多模态模型和推理示例，重点是小尺寸部署。公告给出了显存占用和示例任务，但没有覆盖完整基准。",
+            "primary": true
+          },
+          {
+            "id": "impact",
+            "title": "为什么重要",
+            "content": "对本地部署和原型验证来说，模型尺寸与推理示例比单一榜单分数更有用。需要进一步确认许可证和商用限制。",
+            "primary": false
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"feed_name": "Hugging Face Blog", "category": "tooling"}
+    },
+    {
+      "id": "rss:anthropic:1",
+      "title": "Anthropic 更新 Claude 的开发者上下文接口",
+      "url": "https://example.com/anthropic-context",
+      "source": "Example Feed",
+      "source_type": "rss",
+      "author": "Example Team",
+      "published_at": "2026-10-26T18:30:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "ai-news",
+      "profile": "ai-news",
+      "score": 8.6,
+      "reason": "接口变化直接影响开发者迁移，并提供了版本说明。",
+      "one_liner": "新的上下文接口调整了长文档输入和工具结果的组织方式。",
+      "tags": ["anthropic", "claude", "context", "tooling"],
+      "artifact": {
+        "language": "zh",
+        "title": "Claude 上下文接口",
+        "blocks": [
+          {
+            "id": "summary",
+            "title": "摘要",
+            "content": "更新改变了长文档和工具结果的输入组织方式，可能影响已有提示词和缓存策略。公告给出了迁移说明。",
+            "primary": true
+          },
+          {
+            "id": "impact",
+            "title": "为什么重要",
+            "content": "需要检查现有 Agent 的工具结果拼接和缓存键设计，避免升级后出现上下文重复或失效。",
+            "primary": false
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"feed_name": "Example Feed", "category": "ai-news"}
+    },
+    {
+      "id": "hn:agents:1",
+      "title": "社区讨论：Agent 记忆系统的真实成本",
+      "url": "https://example.com/hn-agents",
+      "source": "Hacker News",
+      "source_type": "hackernews",
+      "author": "community",
+      "published_at": "2026-10-26T14:00:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "community",
+      "profile": "ai-news",
+      "score": 7.4,
+      "reason": "讨论包含多个实际部署经验，但属于社区证据而非官方结论。",
+      "one_liner": "开发者讨论了记忆检索、缓存和清理策略在实际项目中的维护成本。",
+      "tags": ["agents", "memory", "community"],
+      "artifact": {
+        "language": "zh",
+        "title": "Agent 记忆成本",
+        "blocks": [
+          {
+            "id": "community_discussion",
+            "title": "社区讨论",
+            "content": "多位开发者提到，记忆系统的难点不是存储，而是决定何时写入、何时遗忘，以及如何处理互相矛盾的记忆。",
+            "primary": true
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"subreddit": "Hacker News", "category": "community"}
+    },
+    {
+      "id": "google:policy:1",
+      "title": "AI 芯片出口规则出现新提案",
+      "url": "https://example.com/policy",
+      "source": "Google News",
+      "source_type": "google_news",
+      "author": "Example News",
+      "published_at": "2026-10-26T10:00:00Z",
+      "fetched_at": "2026-10-27T08:00:00Z",
+      "category": "industry",
+      "profile": "ai-news",
+      "score": 6.8,
+      "reason": "政策提案值得跟踪，但目前还没有形成最终规则。",
+      "one_liner": "新的政策提案可能影响高端 AI 芯片的出口许可，细节仍在讨论中。",
+      "tags": ["policy", "chips", "industry"],
+      "artifact": {
+        "language": "zh",
+        "title": "芯片出口提案",
+        "blocks": [
+          {
+            "id": "summary",
+            "title": "摘要",
+            "content": "提案讨论了高端 AI 芯片出口许可的调整，但当前仍处于政策讨论阶段，尚未形成最终规则。",
+            "primary": true
+          },
+          {
+            "id": "impact",
+            "title": "为什么重要",
+            "content": "如果规则落地，可能影响云服务采购和跨境部署计划；需要等待正式文本后再判断影响范围。",
+            "primary": false
+          }
+        ],
+        "sources": []
+      },
+      "metadata": {"gn_query": "AI chips policy", "category": "industry"}
+    }
+  ],
+  "edges": [
+    {"source": "rss:openai:1", "target": "hn:agents:1", "kind": "shared_tag", "weight": 0.5, "label": "agents"},
+    {"source": "rss:openai:1", "target": "rss:anthropic:1", "kind": "shared_tag", "weight": 0.5, "label": "tooling"},
+    {"source": "rss:arxiv:1", "target": "rss:openai:1", "kind": "shared_tag", "weight": 0.5, "label": "inference"},
+    {"source": "rss:hf:1", "target": "rss:arxiv:1", "kind": "shared_tag", "weight": 0.5, "label": "model"},
+    {"source": "google:policy:1", "target": "rss:openai:1", "kind": "shared_tag", "weight": 0.5, "label": "industry"}
+  ],
+  "fetch_report": {
+    "status": "partial_failure",
+    "attempted": 6,
+    "successful": 5,
+    "failed": 1,
+    "item_count": 6,
+    "sources": [
+      {"source": "Hacker News", "status": "success", "item_count": 1},
+      {"source": "RSS Feeds", "status": "success", "item_count": 4},
+      {"source": "Google News", "status": "partial_failure", "item_count": 1, "error": "one feed returned 429; retry scheduled"}
+    ]
+  },
+  "stats": {"story_count": 6, "source_count": 6}
+}
