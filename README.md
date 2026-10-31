@@ -12,7 +12,7 @@
 ### 1. 配置 Horizon
 
     cd F:\godot\ai-news-radar\pipeline
-    Copy-Item .env.signalweb.example .env
+    New-Item .env -ItemType File
 
 编辑 pipeline/.env，填写：
 
