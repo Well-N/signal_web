@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "../../components/AppHeader";
 
 type Settings = {
@@ -213,6 +213,7 @@ export default function SetupPage() {
   const [startupEnabled, setStartupEnabled] = useState(false);
   const [startupAvailable, setStartupAvailable] = useState(false);
   const [startupBusy, setStartupBusy] = useState(false);
+  const deliveryToggleBusy = useRef(false);
 
   async function loadStatus() {
     try {
@@ -232,18 +233,14 @@ export default function SetupPage() {
           setEndpoint(payload.status.settings.endpoint);
           setModel(payload.status.settings.model);
           setTime(payload.status.settings.time);
-          setScheduleEnabled(payload.status.settings.schedule_enabled);
+          if (!deliveryToggleBusy.current) {
+            setScheduleEnabled(payload.status.settings.schedule_enabled);
+            setNotifyEnabled(Boolean(payload.status.settings.notify_enabled));
+          }
           setHeaders(JSON.stringify(payload.status.settings.headers ?? {}, null, 2));
           setProvider(providerForEndpoint(payload.status.settings.endpoint));
           setNotifyFeishu(Boolean(payload.status.settings.notify_feishu));
           setNotifyWecom(Boolean(payload.status.settings.notify_wecom));
-          setNotifyEnabled(
-            Boolean(
-              payload.status.settings.notify_enabled ??
-                payload.status.settings.notify_feishu ??
-                payload.status.settings.notify_wecom,
-            ),
-          );
           setReportDir(payload.status.settings.report_dir || payload.status.default_report_dir || "");
           setPdfStyle(payload.status.settings.pdf_style || "grid");
         }
@@ -307,11 +304,13 @@ export default function SetupPage() {
     }
     setStartupBusy(true);
     setDeliveryError("");
+    setStartupEnabled(enabled);
     try {
       const result = await bridge.setStartup(enabled);
-      setStartupEnabled(Boolean(result));
+      if (Boolean(result) !== enabled) throw new Error("开机自启动设置没有生效，请检查系统启动项。");
       setDeliveryMessage(result ? "已开启开机自启动。" : "已关闭开机自启动。");
     } catch (caught) {
+      setStartupEnabled(!enabled);
       setDeliveryError(caught instanceof Error ? caught.message : "开机自启动设置失败");
     } finally {
       setStartupBusy(false);
@@ -319,9 +318,12 @@ export default function SetupPage() {
   }
 
   async function toggleDeliveryOption(option: "schedule_enabled" | "notify_enabled", enabled: boolean) {
+    deliveryToggleBusy.current = true;
     setDeliverySaving(true);
     setDeliveryError("");
     setDeliveryMessage("");
+    if (option === "schedule_enabled") setScheduleEnabled(enabled);
+    else setNotifyEnabled(enabled);
     try {
       const response = await fetch("/api/setup/delivery", {
         method: "POST",
@@ -332,16 +334,17 @@ export default function SetupPage() {
       if (!response.ok || payload.ok !== true) {
         throw new Error(String(payload.error || "设置更新失败"));
       }
-      if (option === "schedule_enabled") setScheduleEnabled(enabled);
-      else setNotifyEnabled(enabled);
       setDeliveryMessage(
         option === "schedule_enabled"
           ? enabled ? "已开启每日自动运行。" : "已取消每日自动运行。"
           : enabled ? "已开启每日推送。" : "已取消每日推送。",
       );
     } catch (caught) {
+      if (option === "schedule_enabled") setScheduleEnabled(!enabled);
+      else setNotifyEnabled(!enabled);
       setDeliveryError(caught instanceof Error ? caught.message : String(caught));
     } finally {
+      deliveryToggleBusy.current = false;
       setDeliverySaving(false);
     }
   }

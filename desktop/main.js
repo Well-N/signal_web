@@ -96,15 +96,25 @@ ipcMain.handle("signalweb:get-startup", () => startupEnabled());
 
 ipcMain.handle("signalweb:set-startup", (_event, enabled) => {
   if (process.platform !== "win32" && process.platform !== "darwin") return false;
-  const options = {
-    openAtLogin: Boolean(enabled),
-    openAsHidden: false,
-  };
   if (process.platform === "win32") {
-    Object.assign(options, startupOptions());
+    const expected = startupOptions();
+    const matches = app.getLoginItemSettings(expected).launchItems.filter(
+      (item) =>
+        normalizeStartupArg(item.path) === normalizeStartupArg(expected.path) &&
+        sameStartupArgs(item.args, expected.args),
+    );
+    for (const item of matches) {
+      app.setLoginItemSettings({ ...expected, name: item.name, openAtLogin: false });
+    }
+    if (enabled) {
+      app.setLoginItemSettings({ ...expected, name: "SignalWeb", openAtLogin: true });
+    }
+  } else {
+    app.setLoginItemSettings({ openAtLogin: Boolean(enabled), openAsHidden: false });
   }
-  app.setLoginItemSettings(options);
-  return startupEnabled();
+  const result = startupEnabled();
+  if (result !== Boolean(enabled)) throw new Error("开机自启动设置没有生效，请检查系统启动项。");
+  return result;
 });
 
 async function isServerReady() {
