@@ -55,8 +55,15 @@ jobs:
         run: |
           test "$(find desktop/dist -maxdepth 1 -name "SignalWeb-*-mac-${{ matrix.arch }}.dmg" | wc -l | tr -d ' ')" = "1"
           test "$(find desktop/dist -maxdepth 1 -name "SignalWeb-*-mac-${{ matrix.arch }}.zip" | wc -l | tr -d ' ')" = "1"
-      - name: Start packaged app and check local service
+      - name: Start packaged app, open home page and capture screenshot
         run: node desktop/scripts/smoke-mac.cjs
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: SignalWeb-mac-${{ matrix.arch }}-home-screenshot
+          path: desktop/dist/SignalWeb-mac-${{ matrix.arch }}-home.png
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: SignalWeb-mac-${{ matrix.arch }}

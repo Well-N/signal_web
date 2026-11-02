@@ -1,6 +1,13 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("node:child_process");
-const { existsSync, mkdirSync, readdirSync, copyFileSync, appendFileSync } = require("node:fs");
+const {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  copyFileSync,
+  appendFileSync,
+  writeFileSync,
+} = require("node:fs");
 const path = require("node:path");
 
 app.setName("SignalWeb");
@@ -227,6 +234,22 @@ async function createWindow() {
     shell.openExternal(url);
     return { action: "deny" };
   });
+  const screenshotPath = process.env.SIGNALWEB_SCREENSHOT_PATH;
+  if (screenshotPath) {
+    await mainWindow.webContents.executeJavaScript(`
+      Promise.all([
+        document.fonts.ready,
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      ])
+    `);
+    await new Promise((resolve) => setTimeout(resolve, 750));
+    const image = await mainWindow.webContents.capturePage();
+    if (image.isEmpty()) throw new Error("应用窗口截图失败");
+    mkdirSync(path.dirname(screenshotPath), { recursive: true });
+    writeFileSync(screenshotPath, image.toPNG());
+    const size = image.getSize();
+    console.log(`Captured app screenshot: ${screenshotPath} (${size.width}x${size.height})`);
+  }
 }
 
 const gotLock = app.requestSingleInstanceLock();
