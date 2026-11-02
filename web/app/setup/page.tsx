@@ -318,6 +318,34 @@ export default function SetupPage() {
     }
   }
 
+  async function toggleDeliveryOption(option: "schedule_enabled" | "notify_enabled", enabled: boolean) {
+    setDeliverySaving(true);
+    setDeliveryError("");
+    setDeliveryMessage("");
+    try {
+      const response = await fetch("/api/setup/delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [option]: enabled }),
+      });
+      const payload = (await response.json()) as Record<string, unknown>;
+      if (!response.ok || payload.ok !== true) {
+        throw new Error(String(payload.error || "设置更新失败"));
+      }
+      if (option === "schedule_enabled") setScheduleEnabled(enabled);
+      else setNotifyEnabled(enabled);
+      setDeliveryMessage(
+        option === "schedule_enabled"
+          ? enabled ? "已开启每日自动运行。" : "已取消每日自动运行。"
+          : enabled ? "已开启每日推送。" : "已取消每日推送。",
+      );
+    } catch (caught) {
+      setDeliveryError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDeliverySaving(false);
+    }
+  }
+
   useEffect(() => {
     if (!polling) return;
     const timer = window.setInterval(() => {
@@ -846,7 +874,8 @@ export default function SetupPage() {
               <input
                 id="schedule-enabled"
                 checked={scheduleEnabled}
-                onChange={(event) => setScheduleEnabled(event.target.checked)}
+                disabled={deliverySaving}
+                onChange={(event) => void toggleDeliveryOption("schedule_enabled", event.target.checked)}
                 type="checkbox"
               />
               每日自动运行
@@ -865,7 +894,8 @@ export default function SetupPage() {
               <input
                 id="notify-enabled"
                 checked={notifyEnabled}
-                onChange={(event) => setNotifyEnabled(event.target.checked)}
+                disabled={deliverySaving}
+                onChange={(event) => void toggleDeliveryOption("notify_enabled", event.target.checked)}
                 type="checkbox"
               />
               每日推送
