@@ -53,14 +53,14 @@ jobs:
         run: npm run dist:mac --prefix desktop
       - name: Verify package
         run: |
-          test -f "desktop/dist/SignalWeb-0.1.3-mac-${{ matrix.arch }}.dmg"
-          test -f "desktop/dist/SignalWeb-0.1.3-mac-${{ matrix.arch }}.zip"
+          test "$(find desktop/dist -maxdepth 1 -name "SignalWeb-*-mac-${{ matrix.arch }}.dmg" | wc -l | tr -d ' ')" = "1"
+          test "$(find desktop/dist -maxdepth 1 -name "SignalWeb-*-mac-${{ matrix.arch }}.zip" | wc -l | tr -d ' ')" = "1"
       - name: Start packaged app and check local service
         run: node desktop/scripts/smoke-mac.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: SignalWeb-mac-${{ matrix.arch }}
           path: |
-            desktop/dist/SignalWeb-0.1.3-mac-${{ matrix.arch }}.dmg
-            desktop/dist/SignalWeb-0.1.3-mac-${{ matrix.arch }}.zip
+            desktop/dist/SignalWeb-*-mac-${{ matrix.arch }}.dmg
+            desktop/dist/SignalWeb-*-mac-${{ matrix.arch }}.zip
           if-no-files-found: error
