@@ -38,6 +38,7 @@ jobs:
           cd pipeline
           python -m uv export --frozen --extra dev --no-emit-project --no-header --format requirements-txt --output-file /tmp/requirements-dev.txt
           python -m pip install --disable-pip-version-check --require-hashes --no-deps -r /tmp/requirements-dev.txt
+          cd ..
           npm ci --prefix web
       - name: Run backend tests
         working-directory: pipeline
