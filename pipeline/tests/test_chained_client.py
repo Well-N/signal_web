@@ -198,7 +198,8 @@ def test_create_chained_client_uses_provider_defaults_without_leaking_base_url()
     assert [entry.provider for entry in chained.configs] == providers
     for entry in chained.configs:
         defaults = AI_PROVIDER_DEFAULTS[entry.provider]
-        assert entry.model == defaults["model"]
+        expected_model = config.model if entry.provider == config.provider else defaults["model"]
+        assert entry.model == expected_model
         assert entry.api_key_env == defaults["api_key_env"]
         expected_base_url = (
             config.base_url

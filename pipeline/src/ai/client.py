@@ -690,7 +690,7 @@ def _create_chained_client(config: AIConfig) -> ChainedAIClient:
             provider=provider,
             model=(
                 config.model
-                if provider == config.provider and provider in {AIProvider.MINIMAX, AIProvider.OPENAI_CHATGPT}
+                if provider == config.provider
                 else defaults.get("model", config.model)
             ),
             api_key_env=defaults.get("api_key_env", config.api_key_env),
