@@ -271,7 +271,11 @@ def test_appends_profiles_missing_from_configured_order() -> None:
         "tech-news",
         "tech-blog",
         "ai-creator",
+        "ai-news",
+        "cross-border",
         "finance-news",
+        "solopreneur",
+        "world-news",
     ]
 
 
