@@ -33,7 +33,7 @@ Windows 安装包无法直接转换为 APK，因此 `android/` 是独立的原�
 
 ## 2026-10-31 增量
 
-测试 APK 0.2.0 已增加 GitHub 用户事件和仓库 Release、Reddit 用户与板块 JSON、GDELT、OSS Insight、Telegram 公开频道和 X 的 Apify 模式。X 的 Token 由 Android Keystore 加密；未配置时明确报错。来源按桌面配置启用，逐个显示成功数量或失败原因，不切换到其他数据入口。GitHub、GDELT、OSS Insight、Telegram 已在模拟设备发起真实请求；GitHub 测试用的不存在仓库返回 404，GDELT 当前受接口限制未取到文章，后两项在当天筛选下为 0 条。Reddit 和 X 尚未用真实账号或 Token 测通。
+测试 APK 0.2.1 已增加 GitHub 用户事件和仓库 Release、Reddit 用户与板块 JSON、GDELT、OSS Insight、Telegram 公开频道和 X 的 Apify 模式。X 的 Token 由 Android Keystore 加密；未配置时明确报错。来源按桌面配置启用，逐个显示成功数量或失败原因，不切换到其他数据入口。定时日报会以前台数据同步任务运行，避免完整分析超过普通后台任务时限后被系统截断；可重试错误会按退避策略重试。GitHub、GDELT、OSS Insight、Telegram 已在模拟设备发起真实请求；GitHub 测试用的不存在仓库返回 404，GDELT 当前受接口限制未取到文章，后两项在当天筛选下为 0 条。Reddit 和 X 尚未用真实账号或 Token 测通。
 
 Profile 的 `web_search` 与 `history_search` 已接入手机端：先由模型规划区块范围内最多 3 次调用；联网搜索按用户 2026-10-31 同意使用 DeepSeek 官方 Search API，历史搜索以手机本地旧日报做 BM25 查询。结果附带来源链接、区块 ID 和引用编号，生成的双语详情与 PDF 均保存实际引用，不允许跨区块引用。DeepSeek 官方文档说明成功且有结果的 Search 请求从 2026-11-01 00:00（北京时间）开始收费，现行标价为每 1000 次 0.75 美元。参见 https://api-docs.deepseek.com/guides/search/ 。
 
@@ -41,7 +41,7 @@ Profile 的 `web_search` 与 `history_search` 已接入手机端：先由模型�
 
 后续同日增量：用户同意 OpenBB 按所选提供方直连。手机端已实现 `yfinance`（Yahoo Finance）、`nasdaq`、`tmx` 三种观察名单来源；模拟设备连接 3 个观察名单，合计取回 5 条新闻，来源错误 0。其他提供方仍逐项报错。X 的 Apify 模式已增加按配置抓取回复，尚无 Token 做端到端验证。定时日报现可发系统通知；没有通知权限或通知失败时首页显示原因。财经新闻的原文引用现支持将完全相同的原文 URL 规范化为 `source-1`，其他跨区块或虚构引用仍拒绝。一次财经新闻分析中模型返回不完整 JSON，应用明确报分析失败，未生成虚假报告。
 
-**仍未完成完整移植：** OpenBB 除上述 3 家以外的提供方尚未实现。正文提取仍是 Android 上的语义 HTML 方案，不能等同于 Python trafilatura。Reddit、X/Apify、后台定时任务和系统通知尚需真实配置或实体手机验证。0.2.0 仍是 Debug 签名测试包，不能当作正式发布版。
+**仍未完成完整移植：** OpenBB 除上述 3 家以外的提供方尚未实现。正文提取仍是 Android 上的语义 HTML 方案，不能等同于 Python trafilatura。Reddit、X/Apify、后台定时任务和系统通知尚需真实配置或实体手机验证。0.2.1 仍是 Debug 签名测试包，不能当作正式发布版。
 
 最终打包复核：OpenBB 手机端逐来源状态显示为 Yahoo AAPL 5 条、Nasdaq AAPL 0 条、TMX SHOP 0 条，三项接口状态均为成功；0 条为所选时间窗内无条目。已恢复模拟设备原始来源配置（19 个 RSS 启用），最终 APK 编译并通过 apksigner 校验。APK 为 3,254,590 字节，SHA-256：37CDB8CDBB12AC5FF605B31F882ECE5BE808797C044CDF6711D233442DAE39DD；检查确认未包含测试 DeepSeek Key。财经观察名单可直接在手机来源页添加与删除。来源抓取现按来源原子收录：失败来源的部分条目不会进入日报。
 

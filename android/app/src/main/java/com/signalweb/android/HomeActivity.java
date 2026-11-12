@@ -46,6 +46,8 @@ public final class HomeActivity extends Activity {
     private TextView status;
     private ScrollView scroll;
     private JSONObject currentBrief;
+    private Button reportButton;
+    private boolean reportRunning;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -77,7 +79,8 @@ public final class HomeActivity extends Activity {
         status.setText("新闻、分析和日报保存在这部手机。");
         body.removeAllViews();
         heading("日报");
-        button(body, "运行一次，生成双语日报", this::runReport);
+        reportButton = button(body, "运行一次，生成双语日报", this::runReport);
+        reportButton.setEnabled(!reportRunning);
         button(body, "查看最新日报", this::openLatest);
         button(body, "历史日报", this::showHistory);
         String last = getSharedPreferences("report_schedule", MODE_PRIVATE)
@@ -190,6 +193,7 @@ public final class HomeActivity extends Activity {
                     .setRequiredNetworkType(NetworkType.CONNECTED).build();
             PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(ReportWorker.class, 24, TimeUnit.HOURS)
                     .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                    .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
                     .setConstraints(constraints).build();
             WorkManager.getInstance(this).enqueueUniquePeriodicWork("daily-report",
                     ExistingPeriodicWorkPolicy.UPDATE, request);
@@ -447,6 +451,12 @@ public final class HomeActivity extends Activity {
     }
 
     private void runReport() {
+        if (reportRunning) {
+            status.setText("日报正在生成，请等待当前任务结束");
+            return;
+        }
+        reportRunning = true;
+        if (reportButton != null) reportButton.setEnabled(false);
         status.setText("正在生成日报…");
         worker.execute(() -> {
             try {
@@ -454,6 +464,12 @@ public final class HomeActivity extends Activity {
                         runOnUiThread(() -> status.setText(message)));
                 runOnUiThread(() -> showReport(brief));
             } catch (Exception error) { fail("日报生成失败", error); }
+            finally {
+                runOnUiThread(() -> {
+                    reportRunning = false;
+                    if (reportButton != null) reportButton.setEnabled(true);
+                });
+            }
         });
     }
 
@@ -742,12 +758,13 @@ public final class HomeActivity extends Activity {
         return view;
     }
 
-    private void button(LinearLayout parent, String label, Runnable action) {
+    private Button button(LinearLayout parent, String label, Runnable action) {
         Button button = new Button(this);
         button.setText(label);
         button.setAllCaps(false);
         parent.addView(button);
         button.setOnClickListener(view -> action.run());
+        return button;
     }
 
     private int dp(int value) { return (int) (value * getResources().getDisplayMetrics().density); }
@@ -758,7 +775,7 @@ public final class HomeActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        worker.shutdown();
+        worker.shutdownNow();
         super.onDestroy();
     }
 }

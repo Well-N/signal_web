@@ -38,6 +38,14 @@ _TEST_URL_ENV = "TEST_WEBHOOK_URL"
 _TEST_URL = "https://example.com/webhook"
 
 
+@pytest.fixture(autouse=True)
+def resolve_example_as_public(monkeypatch):
+    monkeypatch.setattr(
+        "src.url_security._resolve_hostname",
+        AsyncMock(return_value={"93.184.216.34"}),
+    )
+
+
 # ── Template variable replacement ──
 
 

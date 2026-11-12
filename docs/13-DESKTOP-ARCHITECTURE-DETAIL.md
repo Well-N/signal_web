@@ -168,7 +168,7 @@ APP 未打开时：
 
 - 升级应用时替换 resources，不覆盖用户设置和历史。
 - 用户数据不写入安装目录，避免权限和更新问题。
-- 配置只在 settings.json 保存 Base URL、模型、时间、语言和开关；Key 在 Keyring。
+- 配置只在 settings.json 保存 Base URL、模型、时间、语言和开关；Key、Webhook 和额外请求头在 Keyring。
 
 ## 7. Runner 的目录改造
 

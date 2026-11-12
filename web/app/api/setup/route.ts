@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/json-request";
 import { runnerCommand } from "@/lib/runner-command";
 
 export const dynamic = "force-dynamic";
@@ -65,18 +66,24 @@ function runRunner(command: string, input?: unknown) {
 function spawnDailyRun() {
   const root = pipelineDir();
   const runner = runnerCommand(root, "run", pythonBackgroundExecutable());
-  const child = spawn(/*turbopackIgnore: true*/ runner.executable, runner.args, {
-    cwd: root,
-    env: {
-      ...process.env,
-      PYTHONUTF8: "1",
-      PYTHONIOENCODING: "utf-8",
-    },
-    detached: true,
-    stdio: "ignore",
-    windowsHide: true,
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(/*turbopackIgnore: true*/ runner.executable, runner.args, {
+      cwd: root,
+      env: {
+        ...process.env,
+        PYTHONUTF8: "1",
+        PYTHONIOENCODING: "utf-8",
+      },
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    child.once("spawn", () => {
+      child.unref();
+      resolve();
+    });
+    child.once("error", reject);
   });
-  child.unref();
 }
 
 function parseRunnerOutput(stdout: string) {
@@ -100,7 +107,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonObject(request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "请求格式错误" },
+      { status: 400 },
+    );
+  }
   const result = await runRunner("configure", payload);
   const response = parseRunnerOutput(result.stdout);
   if (!response || result.code !== 0 || response.ok !== true) {
@@ -112,6 +127,14 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  spawnDailyRun();
-  return NextResponse.json({ ...response, run_started: true });
+  try {
+    await spawnDailyRun();
+    return NextResponse.json({ ...response, run_started: true });
+  } catch (error) {
+    return NextResponse.json({
+      ...response,
+      run_started: false,
+      run_error: error instanceof Error ? error.message : "首次抓取未能启动",
+    });
+  }
 }

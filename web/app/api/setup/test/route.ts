@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/json-request";
 import { runnerCommand } from "@/lib/runner-command";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,15 @@ function runTest(input: unknown) {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    payload = await readJsonObject(request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "请求格式错误" },
+      { status: 400 },
+    );
+  }
   const result = await runTest({
     endpoint: payload.endpoint,
     model: payload.model,

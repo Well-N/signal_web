@@ -5,12 +5,21 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
+import pytest
 
 from src.extractors import TrafilaturaExtractor
 from src.extractors.trafilatura import ARTICLE_HEADERS
 from src.models import TrafilaturaExtractorConfig
 
 URL = "https://example.com/article"
+
+
+@pytest.fixture(autouse=True)
+def resolve_example_as_public(monkeypatch):
+    monkeypatch.setattr(
+        "src.url_security._resolve_hostname",
+        AsyncMock(return_value={"93.184.216.34"}),
+    )
 
 
 def _extractor() -> TrafilaturaExtractor:

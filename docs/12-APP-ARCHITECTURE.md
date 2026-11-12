@@ -46,7 +46,7 @@
       → 后台启动 run
       → UI 轮询 /api/setup 状态
 
-API Key 不会写入 settings.json、浏览器 localStorage、URL 参数或命令行参数。
+API Key、机器人 Webhook 和额外请求头不会写入 settings.json、浏览器 localStorage、URL 参数或命令行参数；额外请求头通过状态接口只返回“已配置”标记。
 
 ## 每日任务
 

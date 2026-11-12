@@ -20,9 +20,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class ReportEngine {
     interface Progress { void update(String message); }
+
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
 
     private final Context context;
     private final ConfigStore config;
@@ -34,6 +37,17 @@ final class ReportEngine {
     }
 
     JSONObject run(Progress progress) throws Exception {
+        if (!RUNNING.compareAndSet(false, true)) {
+            throw new IllegalStateException("已有日报任务正在运行，请等待当前任务结束");
+        }
+        try {
+            return runExclusive(progress);
+        } finally {
+            RUNNING.set(false);
+        }
+    }
+
+    private JSONObject runExclusive(Progress progress) throws Exception {
         JSONObject settings = config.settings();
         String key = new KeyVault(context).read();
         if (key == null || key.trim().isEmpty()) throw new IllegalStateException("请先保存并测试 DeepSeek API Key");

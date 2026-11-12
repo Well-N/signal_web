@@ -30,12 +30,15 @@ from urllib.parse import urlparse
 
 import httpx
 import keyring
+from filelock import FileLock
+from filelock import Timeout as FileLockTimeout
 from rich.console import Console
 
 
 APP_NAME = "SignalWeb"
 KEYRING_SERVICE = "SignalWeb"
 KEYRING_USER = "llm-api-key"
+KEYRING_HEADERS = "llm-extra-headers"
 KEYRING_FEISHU = "feishu-webhook"
 KEYRING_WECOM = "wecom-webhook"
 TASK_NAME = "SignalWebDaily"
@@ -94,6 +97,7 @@ CONFIG_DIR = (
 )
 SETTINGS_PATH = CONFIG_DIR / "settings.json"
 RUN_STATUS_PATH = CONFIG_DIR / "last_run.json"
+RUN_LOCK_PATH = ROOT / "data" / "state" / "run.lock"
 LAUNCH_AGENT_PATH = Path.home() / "Library" / "LaunchAgents" / "com.signalweb.daily.plist"
 
 
@@ -165,24 +169,26 @@ def validate_time(value: str) -> str:
 
 
 def webhook(channel: str) -> str | None:
-    try:
-        return keyring.get_password(
-            KEYRING_SERVICE, KEYRING_FEISHU if channel == "feishu" else KEYRING_WECOM
-        )
-    except Exception:
-        return None
+    return get_secret(KEYRING_FEISHU if channel == "feishu" else KEYRING_WECOM)
 
 
-def apply_delivery_fields(settings: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+def delivery_field_changes(
+    settings: dict[str, Any], payload: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, str | None]]:
+    changes: dict[str, str | None] = {}
+
+    def available(key: str) -> bool:
+        return bool(changes[key]) if key in changes else bool(get_secret(key))
+
     for channel, label, key in (
         ("feishu", "飞书", KEYRING_FEISHU),
         ("wecom", "企业微信", KEYRING_WECOM),
     ):
         value = payload.get(f"{channel}_webhook")
         if isinstance(value, str) and value.strip():
-            keyring.set_password(KEYRING_SERVICE, key, validate_webhook(value, label))
+            changes[key] = validate_webhook(value, label)
         if payload.get(f"clear_{channel}"):
-            keyring.delete_password(KEYRING_SERVICE, key)
+            changes[key] = None
             settings[f"notify_{channel}"] = False
         elif f"notify_{channel}" in payload:
             settings[f"notify_{channel}"] = bool(payload[f"notify_{channel}"])
@@ -200,12 +206,12 @@ def apply_delivery_fields(settings: dict[str, Any], payload: dict[str, Any]) -> 
         settings["schedule_enabled"] = bool(payload["schedule_enabled"])
     if "notify_enabled" in payload:
         settings["notify_enabled"] = bool(payload["notify_enabled"])
-    if settings.get("notify_enabled") and settings.get("notify_feishu") and not webhook("feishu"):
+    if settings.get("notify_enabled") and settings.get("notify_feishu") and not available(KEYRING_FEISHU):
         raise RunnerError("启用飞书投递前需要填写飞书 Webhook")
-    if settings.get("notify_enabled") and settings.get("notify_wecom") and not webhook("wecom"):
+    if settings.get("notify_enabled") and settings.get("notify_wecom") and not available(KEYRING_WECOM):
         raise RunnerError("启用企业微信投递前需要填写企业微信 Webhook")
     settings["updated_at"] = datetime.now(timezone.utc).isoformat()
-    return settings
+    return settings, changes
 
 
 class Tee:
@@ -256,22 +262,81 @@ def read_settings() -> dict[str, Any]:
         raise RunnerError("settings.json 无法读取") from exc
     if not isinstance(data, dict):
         raise RunnerError("settings.json 格式错误")
-    return normalize_settings(data)
+    legacy_headers = data.pop("headers", None)
+    settings = normalize_settings(data)
+    if legacy_headers is not None:
+        settings["headers"] = normalize_headers(legacy_headers)
+        set_secret(KEYRING_HEADERS, serialized_headers(settings["headers"]))
+        write_settings(settings)
+    else:
+        settings["headers"] = stored_headers()
+    return settings
 
 
 def write_settings(settings: dict[str, Any]) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(
-        json.dumps(settings, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    safe = {key: value for key, value in settings.items() if key not in {"api_key", "headers"}}
+    temp = SETTINGS_PATH.with_name(SETTINGS_PATH.name + ".tmp")
+    temp.write_text(json.dumps(safe, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp, SETTINGS_PATH)
+
+
+def get_secret(name: str) -> str | None:
+    try:
+        return keyring.get_password(KEYRING_SERVICE, name)
+    except Exception as exc:
+        raise RunnerError("无法读取系统凭据库：" + str(exc)) from exc
+
+
+def set_secret(name: str, value: str | None) -> None:
+    try:
+        if value is None:
+            keyring.delete_password(KEYRING_SERVICE, name)
+        else:
+            keyring.set_password(KEYRING_SERVICE, name, value)
+    except keyring.errors.PasswordDeleteError:
+        return
+    except Exception as exc:
+        raise RunnerError("无法写入系统凭据库：" + str(exc)) from exc
+
+
+def normalize_headers(value: Any) -> dict[str, str]:
+    if isinstance(value, str):
+        value = value.strip()
+        if value:
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError as exc:
+                raise RunnerError("额外请求头必须是 JSON 对象") from exc
+        else:
+            value = {}
+    if value is None:
+        value = {}
+    if not isinstance(value, dict):
+        raise RunnerError("额外请求头必须是 JSON 对象")
+    return {
+        str(name): str(header_value)
+        for name, header_value in value.items()
+        if str(name).strip()
+    }
+
+
+def serialized_headers(headers: dict[str, str]) -> str | None:
+    return json.dumps(headers, ensure_ascii=False, sort_keys=True) if headers else None
+
+
+def stored_headers() -> dict[str, str]:
+    raw = get_secret(KEYRING_HEADERS)
+    if not raw:
+        return {}
+    try:
+        return normalize_headers(json.loads(raw))
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise RunnerError("系统凭据库中的额外请求头格式错误") from exc
 
 
 def api_key() -> str:
-    try:
-        value = keyring.get_password(KEYRING_SERVICE, KEYRING_USER)
-    except Exception as exc:
-        raise RunnerError("无法读取系统凭据库：" + str(exc)) from exc
+    value = get_secret(KEYRING_USER)
     if not value:
         raise RunnerError("系统凭据库中没有 API Key")
     return value
@@ -279,21 +344,7 @@ def api_key() -> str:
 
 def validate_settings(payload: dict[str, Any]) -> dict[str, Any]:
     endpoint = str(payload.get("endpoint", "")).strip()
-    raw_headers = payload.get("headers", {})
-    if isinstance(raw_headers, str):
-        raw_headers = raw_headers.strip()
-        if raw_headers:
-            try:
-                raw_headers = json.loads(raw_headers)
-            except json.JSONDecodeError as exc:
-                raise RunnerError("额外请求头必须是 JSON 对象") from exc
-        else:
-            raw_headers = {}
-    if raw_headers is None:
-        raw_headers = {}
-    if not isinstance(raw_headers, dict):
-        raise RunnerError("额外请求头必须是 JSON 对象")
-    headers = {str(name): str(value) for name, value in raw_headers.items() if str(name).strip()}
+    headers = normalize_headers(payload.get("headers", {}))
     model = str(payload.get("model", "")).strip()
     key = str(payload.get("api_key", "")).strip()
     daily_time = str(payload.get("time", "08:00")).strip()
@@ -529,13 +580,87 @@ def test_connection(settings: dict[str, Any], key: str | None = None) -> dict[st
 
 def save_run_status(data: dict[str, Any]) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    RUN_STATUS_PATH.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    temp = RUN_STATUS_PATH.with_name(RUN_STATUS_PATH.name + ".tmp")
+    temp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp, RUN_STATUS_PATH)
+
+
+def run_task_active() -> bool:
+    RUN_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(RUN_LOCK_PATH))
+    try:
+        lock.acquire(timeout=0)
+    except FileLockTimeout:
+        return True
+    lock.release()
+    return False
+
+
+def configure_schedule(settings: dict[str, Any]) -> dict[str, Any]:
+    if settings.get("schedule_enabled", True):
+        return register_task(settings)
+    result = unregister_task()
+    result["enabled"] = False
+    return result
+
+
+def restore_schedule(settings: dict[str, Any] | None) -> None:
+    if settings is None:
+        unregister_task()
+        return
+    configure_schedule(settings)
+
+
+def commit_settings(
+    updated: dict[str, Any],
+    previous: dict[str, Any] | None,
+    credential_changes: dict[str, str | None],
+) -> dict[str, Any]:
+    secret_names = {KEYRING_USER, KEYRING_HEADERS, KEYRING_FEISHU, KEYRING_WECOM}
+    before = {name: get_secret(name) for name in secret_names}
+    try:
+        for name, value in credential_changes.items():
+            set_secret(name, value)
+        schedule_result = configure_schedule(updated)
+        write_settings(updated)
+        return schedule_result
+    except Exception as exc:
+        rollback_errors: list[str] = []
+        for name, value in before.items():
+            try:
+                set_secret(name, value)
+            except RunnerError as rollback_error:
+                rollback_errors.append(str(rollback_error))
+        try:
+            restore_schedule(previous)
+        except Exception as rollback_error:
+            rollback_errors.append(str(rollback_error))
+        if rollback_errors:
+            raise RunnerError(
+                f"{exc}；回滚时仍有错误：{'；'.join(rollback_errors)}"
+            ) from exc
+        raise
+
+
+def acquire_run_lock() -> FileLock:
+    RUN_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(str(RUN_LOCK_PATH))
+    try:
+        lock.acquire(timeout=0)
+    except FileLockTimeout as exc:
+        raise RunnerError("已有日报任务正在运行，请等待当前任务结束") from exc
+    return lock
 
 
 def run_pipeline() -> dict[str, Any]:
+    lock = acquire_run_lock()
+    try:
+        return _run_pipeline_locked()
+    finally:
+        lock.release()
+
+
+def _run_pipeline_locked() -> dict[str, Any]:
     # The Windows scheduled task starts with System32 as its working directory.
     # Resolve config.profiles_dir and docs paths from the pipeline root instead.
     os.chdir(ROOT)
@@ -632,12 +757,14 @@ def run_pipeline() -> dict[str, Any]:
 
 
 def status_payload() -> dict[str, Any]:
+    active = run_task_active()
     result: dict[str, Any] = {
         "settings_path": str(SETTINGS_PATH),
         "run_status_path": str(RUN_STATUS_PATH),
         "default_report_dir": str(default_report_dir()),
         "has_feishu_webhook": bool(webhook("feishu")),
         "has_wecom_webhook": bool(webhook("wecom")),
+        "run_active": active,
     }
     result["pdf_styles"] = PDF_STYLE_CATALOG
     try:
@@ -645,16 +772,30 @@ def status_payload() -> dict[str, Any]:
         result["settings"] = {
             key: value
             for key, value in settings.items()
-            if key not in {"api_key"}
+            if key not in {"api_key", "headers"}
         }
-        result["has_api_key"] = bool(keyring.get_password(KEYRING_SERVICE, KEYRING_USER))
+        result["has_extra_headers"] = bool(settings.get("headers"))
+        result["has_api_key"] = bool(get_secret(KEYRING_USER))
     except Exception as exc:
         result["settings"] = None
         result["settings_error"] = str(exc)
         result["has_api_key"] = False
+        result["has_extra_headers"] = False
     if RUN_STATUS_PATH.exists():
         try:
-            result["last_run"] = json.loads(RUN_STATUS_PATH.read_text(encoding="utf-8"))
+            last_run = json.loads(RUN_STATUS_PATH.read_text(encoding="utf-8"))
+            if (
+                isinstance(last_run, dict)
+                and last_run.get("started_at")
+                and not last_run.get("finished_at")
+                and not last_run.get("error")
+                and not active
+            ):
+                last_run["ok"] = False
+                last_run["finished_at"] = datetime.now(timezone.utc).isoformat()
+                last_run["error"] = "上次运行意外中断，未留下完成记录"
+                save_run_status(last_run)
+            result["last_run"] = last_run
         except Exception as exc:
             result["last_run_error"] = str(exc)
     else:
@@ -678,17 +819,12 @@ def status_payload() -> dict[str, Any]:
 
 def delivery() -> dict[str, Any]:
     payload = read_stdin_json()
-    settings = read_settings()
-    settings = apply_delivery_fields(settings, payload)
-    write_settings(settings)
-    if settings.get("schedule_enabled", True):
-        schedule_result = register_task(settings)
-    else:
-        schedule_result = unregister_task()
-        schedule_result["enabled"] = False
+    previous = read_settings()
+    settings, credential_changes = delivery_field_changes(dict(previous), payload)
+    schedule_result = commit_settings(settings, previous, credential_changes)
     return {
         "ok": True,
-        "settings": {key: value for key, value in settings.items() if key != "api_key"},
+        "settings": {key: value for key, value in settings.items() if key not in {"api_key", "headers"}},
         "has_feishu_webhook": bool(webhook("feishu")),
         "has_wecom_webhook": bool(webhook("wecom")),
         "schedule": schedule_result,
@@ -737,34 +873,28 @@ def publish() -> dict[str, Any]:
 
 def configure() -> dict[str, Any]:
     raw_payload = read_stdin_json()
-    existing = read_settings() if SETTINGS_PATH.exists() else {}
+    previous = read_settings() if SETTINGS_PATH.exists() else None
+    existing = previous or {}
     payload = {**existing, **raw_payload}
     if not str(payload.get("api_key", "")).strip():
-        existing_key = keyring.get_password(KEYRING_SERVICE, KEYRING_USER)
+        existing_key = get_secret(KEYRING_USER)
         if not existing_key:
             raise RunnerError("首次配置必须提供 API Key")
         payload["api_key"] = existing_key
     settings = validate_settings(payload)
-    apply_delivery_fields(settings, raw_payload)
-    try:
-        keyring.set_password(
-            KEYRING_SERVICE,
-            KEYRING_USER,
-            str(payload["api_key"]).strip(),
-        )
-    except Exception as exc:
-        raise RunnerError("无法写入系统凭据库：" + str(exc)) from exc
-    write_settings(settings)
-    if settings["schedule_enabled"]:
-        schedule_result = register_task(settings)
-    else:
-        schedule_result = unregister_task()
-        schedule_result["enabled"] = False
+    settings, webhook_changes = delivery_field_changes(settings, raw_payload)
+    credential_changes = {
+        KEYRING_USER: str(payload["api_key"]).strip(),
+        KEYRING_HEADERS: serialized_headers(settings["headers"]),
+        **webhook_changes,
+    }
+    schedule_result = commit_settings(settings, previous, credential_changes)
     return {
         "ok": True,
-        "settings": {key: value for key, value in settings.items() if key != "api_key"},
+        "settings": {key: value for key, value in settings.items() if key not in {"api_key", "headers"}},
         "has_feishu_webhook": bool(webhook("feishu")),
         "has_wecom_webhook": bool(webhook("wecom")),
+        "has_extra_headers": bool(settings.get("headers")),
         "schedule": schedule_result,
         "keyring": "stored",
     }
@@ -805,12 +935,18 @@ def main() -> int:
                 if not model_name:
                     raise RunnerError("模型名不能为空")
                 provided_key = str(payload.get("api_key", "")).strip()
+                stored = read_settings() if SETTINGS_PATH.exists() else {}
+                headers = (
+                    normalize_headers(payload["headers"])
+                    if "headers" in payload
+                    else stored.get("headers", {})
+                )
                 emit(
                     test_connection(
                         {
                             "endpoint": endpoint,
                             "model": model_name,
-                            "headers": payload.get("headers") or {},
+                            "headers": headers,
                         },
                         provided_key or None,
                     )

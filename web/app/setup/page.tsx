@@ -37,8 +37,10 @@ type RunnerStatus = {
   settings: Settings | null;
   settings_error?: string;
   has_api_key: boolean;
+  has_extra_headers?: boolean;
   has_feishu_webhook?: boolean;
   has_wecom_webhook?: boolean;
+  run_active?: boolean;
   default_report_dir?: string;
   pdf_styles?: { id: string; name: string; description: string }[];
   last_run: RunStatus | null;
@@ -181,7 +183,7 @@ function parseHeaders(value: string): Record<string, string> {
 export default function SetupPage() {
   const [endpoint, setEndpoint] = useState("");
   const [provider, setProvider] = useState("");
-  const [headers, setHeaders] = useState("{}");
+  const [headers, setHeaders] = useState("");
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [time, setTime] = useState("08:00");
@@ -210,10 +212,12 @@ export default function SetupPage() {
   const [publishing, setPublishing] = useState(false);
   const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
   const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
+  const [runStarting, setRunStarting] = useState(false);
   const [startupEnabled, setStartupEnabled] = useState(false);
   const [startupAvailable, setStartupAvailable] = useState(false);
   const [startupBusy, setStartupBusy] = useState(false);
   const deliveryToggleBusy = useRef(false);
+  const headersTouched = useRef(false);
 
   async function loadStatus() {
     try {
@@ -228,6 +232,16 @@ export default function SetupPage() {
             current ?? (Number.isFinite(statusStartedAt) ? statusStartedAt : null),
           );
           setPolling(true);
+        } else if (payload.status.run_active) {
+          setPolling(true);
+        } else if (!payload.status.run_active) {
+          setPolling(false);
+          setRunStartedAt(null);
+          setRunProgress((current) =>
+            current?.state === "running"
+              ? { ...current, state: "failed", stage: "failed", percent: 100, error: "运行未能启动或已意外中断" }
+              : current,
+          );
         }
         if (payload.status.settings) {
           setEndpoint(payload.status.settings.endpoint);
@@ -237,7 +251,7 @@ export default function SetupPage() {
             setScheduleEnabled(payload.status.settings.schedule_enabled);
             setNotifyEnabled(Boolean(payload.status.settings.notify_enabled));
           }
-          setHeaders(JSON.stringify(payload.status.settings.headers ?? {}, null, 2));
+          if (!headersTouched.current) setHeaders("");
           setProvider(providerForEndpoint(payload.status.settings.endpoint));
           setNotifyFeishu(Boolean(payload.status.settings.notify_feishu));
           setNotifyWecom(Boolean(payload.status.settings.notify_wecom));
@@ -372,6 +386,7 @@ export default function SetupPage() {
         if (payload.state === "finished" || payload.state === "failed") {
           setPolling(false);
           setRunStartedAt(null);
+          if (payload.state === "failed") setError(payload.error || "后台运行失败");
           await loadStatus();
         }
       } catch {
@@ -390,9 +405,9 @@ export default function SetupPage() {
     setSaving(true);
     setError("");
     setMessage("");
-    let headerMap: Record<string, string>;
+    let headerMap: Record<string, string> | undefined;
     try {
-      headerMap = parseHeaders(headers);
+      headerMap = headers.trim() ? parseHeaders(headers) : undefined;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "额外请求头格式不对");
       setSaving(false);
@@ -409,7 +424,7 @@ export default function SetupPage() {
           time,
           language: "zh",
           schedule_enabled: scheduleEnabled,
-          headers: headerMap,
+          ...(headerMap === undefined ? {} : { headers: headerMap }),
         }),
       });
       const payload = (await response.json()) as Record<string, unknown>;
@@ -417,10 +432,16 @@ export default function SetupPage() {
         throw new Error(String(payload.error || "配置失败"));
       }
       setApiKey("");
-      setMessage("配置已保存，每日任务已注册，首次抓取正在后台开始。");
-      setRunStartedAt(Date.now());
-      setRunProgress({ state: "running", stage: "starting", percent: 2 });
-      setPolling(true);
+      setHeaders("");
+      headersTouched.current = false;
+      if (payload.run_started === false) {
+        setError("配置已保存，但首次抓取未能启动：" + String(payload.run_error || "未知原因"));
+      } else {
+        setMessage("配置已保存，每日任务已注册，首次抓取正在后台开始。");
+        setRunStartedAt(Date.now());
+        setRunProgress({ state: "running", stage: "starting", percent: 2 });
+        setPolling(true);
+      }
       await loadStatus();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -430,17 +451,24 @@ export default function SetupPage() {
   }
 
   async function runNow() {
+    if (runStarting || polling) return;
     setError("");
-    setMessage("已启动一次后台抓取，状态会自动刷新。");
-    setRunStartedAt(Date.now());
-    setRunProgress({ state: "running", stage: "starting", percent: 2 });
-    setPolling(true);
-    const response = await fetch("/api/setup/run", { method: "POST" });
-    if (!response.ok) {
+    setMessage("");
+    setRunStarting(true);
+    try {
+      const response = await fetch("/api/setup/run", { method: "POST" });
       const payload = (await response.json()) as { error?: string };
-      setError(payload.error || "启动失败");
+      if (!response.ok) throw new Error(payload.error || "启动失败");
+      setMessage("已启动一次后台抓取，状态会自动刷新。");
+      setRunStartedAt(Date.now());
+      setRunProgress({ state: "running", stage: "starting", percent: 2 });
+      setPolling(true);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "启动失败");
       setPolling(false);
       setRunProgress({ state: "failed", stage: "failed", percent: 100 });
+    } finally {
+      setRunStarting(false);
     }
   }
 
@@ -460,9 +488,9 @@ export default function SetupPage() {
       setMessage("");
       return;
     }
-    let headerMap: Record<string, string>;
+    let headerMap: Record<string, string> | undefined;
     try {
-      headerMap = parseHeaders(headers);
+      headerMap = headers.trim() ? parseHeaders(headers) : undefined;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "额外请求头格式不对");
       setMessage("");
@@ -475,7 +503,12 @@ export default function SetupPage() {
       const response = await fetch("/api/setup/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint, model, api_key: apiKey, headers: headerMap }),
+        body: JSON.stringify({
+          endpoint,
+          model,
+          api_key: apiKey,
+          ...(headerMap === undefined ? {} : { headers: headerMap }),
+        }),
       });
       const payload = (await response.json()) as {
         ok?: boolean;
@@ -715,6 +748,7 @@ export default function SetupPage() {
                   if (preset?.endpoint) {
                     setEndpoint(preset.endpoint);
                     setModel(preset.model);
+                    headersTouched.current = true;
                     setHeaders(JSON.stringify(preset.headers ?? {}, null, 2));
                   }
                 }}
@@ -771,14 +805,19 @@ export default function SetupPage() {
               <textarea
                 id="extra-headers"
                 value={headers}
-                onChange={(event) => setHeaders(event.target.value)}
+                onChange={(event) => {
+                  headersTouched.current = true;
+                  setHeaders(event.target.value);
+                }}
                 rows={3}
                 spellCheck={false}
                 className="field field--area"
                 placeholder='{"x-opencode-session": "signalweb-local"}'
               />
               <span className="field-hint">
-                可选。有些中转站要求额外请求头发送，填 JSON 对象即可；不需要就保持 {"{}"}。
+                {runner?.has_extra_headers && !headers
+                  ? "已保存到系统凭据库；留空保持，输入 {} 可清除。"
+                  : "可选。值会保存在系统凭据库；输入 {} 可清除。"}
               </span>
             </div>
             <div className="actions">
@@ -789,7 +828,12 @@ export default function SetupPage() {
                 {testing ? "测试中…" : "测试连接"}
               </button>
               {configured ? (
-                <button onClick={runNow} className="key" type="button">
+                <button
+                  onClick={runNow}
+                  disabled={runStarting || polling || runner?.run_active || runProgress?.state === "running"}
+                  className="key"
+                  type="button"
+                >
                   立即运行一次
                 </button>
               ) : null}
@@ -804,6 +848,7 @@ export default function SetupPage() {
               <h2>配置状态</h2>
               <p>{configured ? "已完成初始化" : "等待初始化"}</p>
               <p>{runner?.has_api_key ? "系统凭据库中有 API Key" : "尚未保存 API Key"}</p>
+              <p>{runner?.has_extra_headers ? "系统凭据库中有额外请求头" : "未配置额外请求头"}</p>
             </section>
             <section className="setup-status">
               <h2>投递与归档</h2>

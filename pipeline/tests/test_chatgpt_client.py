@@ -230,9 +230,17 @@ def test_chatgpt_drives_classification_scoring_enrichment_and_digest(tmp_path, m
     def handle(request):
         body = json.loads(request.content)
         requests.append(body)
+        if "bilingual news detail content" in body.get("instructions", ""):
+            fields = json.loads(body["input"][0]["content"])
+            value = {
+                key: {"zh": f"中文 {text}", "en": f"English {text}"}
+                for key, text in fields.items()
+            }
+        else:
+            value = next(replies)
         return httpx.Response(200, headers={"Content-Type": "text/event-stream"}, text=sse({
             "type": "response.completed", "sequence_number": 1,
-            "response": response(text=json.dumps(next(replies))),
+            "response": response(text=json.dumps(value)),
         }))
 
     async def run():
@@ -265,7 +273,7 @@ def test_chatgpt_drives_classification_scoring_enrichment_and_digest(tmp_path, m
             await client.client.close()
 
     asyncio.run(run())
-    assert len(requests) == 3
+    assert len(requests) == 4
     assert all("temperature" not in request and request["store"] is False for request in requests)
 
 
