@@ -32,9 +32,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install validation dependencies
+      - name: Install locked validation dependencies
         run: |
-          python -m pip install --disable-pip-version-check ./pipeline pytest
+          python -m pip install --disable-pip-version-check uv==0.13.6
+          cd pipeline
+          python -m uv export --frozen --extra dev --no-emit-project --no-header --format requirements-txt --output-file /tmp/requirements-dev.txt
+          python -m pip install --disable-pip-version-check --require-hashes --no-deps -r /tmp/requirements-dev.txt
           npm ci --prefix web
       - name: Run backend tests
         working-directory: pipeline
@@ -91,7 +94,12 @@ jobs:
           python-version: '3.13'
       - name: Install build dependencies
         run: |
-          python -m pip install --disable-pip-version-check ./pipeline pyinstaller==6.22.3
+          python -m pip install --disable-pip-version-check uv==0.13.6
+          cd pipeline
+          python -m uv export --frozen --no-dev --no-emit-project --no-header --format requirements-txt --output-file /tmp/requirements.txt
+          python -m pip install --disable-pip-version-check --require-hashes --no-deps -r /tmp/requirements.txt
+          python -m pip install --disable-pip-version-check pyinstaller==6.22.3
+          cd ..
           npm ci --prefix web
           npm ci --prefix desktop
       - name: Build macOS package
