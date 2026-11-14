@@ -527,12 +527,16 @@ def unregister_task() -> dict[str, Any]:
             raise RunnerError("删除 Windows 每日任务失败：" + completed.stderr.strip())
         return {"platform": "windows", "removed": True}
     if platform.system() == "Darwin" and LAUNCH_AGENT_PATH.exists():
-        subprocess.run(
+        completed = subprocess.run(
             ["launchctl", "bootout", "gui/" + str(os.getuid()), str(LAUNCH_AGENT_PATH)],
             capture_output=True,
             text=True,
             timeout=20,
         )
+        if completed.returncode != 0:
+            raise RunnerError(
+                "取消 macOS 每日任务失败：" + (completed.stderr or completed.stdout).strip()
+            )
         LAUNCH_AGENT_PATH.unlink()
         return {"platform": "macos", "removed": True}
     return {"platform": platform.system().lower(), "removed": False}
@@ -693,7 +697,9 @@ def _run_pipeline_locked() -> dict[str, Any]:
                 force_terminal=False,
             )
             orchestrator = HorizonOrchestrator(config, storage, console=console)
-            asyncio.run(orchestrator.run(force_hours=24))
+            generated = asyncio.run(orchestrator.run(force_hours=24))
+        if generated is not True:
+            raise RunnerError("本次没有抓取到新内容，未生成新日报")
         latest_path = ROOT / "data" / "export" / "latest.json"
         if not latest_path.exists():
             raise RunnerError("流水线结束但没有生成 data/export/latest.json")

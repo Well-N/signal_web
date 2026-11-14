@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -143,3 +145,52 @@ def test_schedule_failure_leaves_settings_file_unchanged(tmp_path, monkeypatch):
     persisted = json.loads(runner.SETTINGS_PATH.read_text(encoding="utf-8"))
     assert persisted["schedule_enabled"] is False
     assert secrets[runner.KEYRING_USER] == "old-key"
+
+
+def test_empty_crawl_does_not_publish_existing_brief(tmp_path, monkeypatch):
+    runner, _secrets = load_runner(tmp_path, monkeypatch)
+    monkeypatch.setattr(runner.os, "environ", dict(os.environ))
+    runner.ROOT = tmp_path
+    export = tmp_path / "data" / "export"
+    export.mkdir(parents=True)
+    old_brief = export / "latest.json"
+    old_brief.write_text('{"date":"2026-01-01"}', encoding="utf-8")
+    monkeypatch.setattr(runner, "read_settings", lambda: base_settings())
+    monkeypatch.setattr(runner, "api_key", lambda: "test-key")
+    monkeypatch.setattr(runner, "test_connection", lambda *_args: None)
+    monkeypatch.setattr("src.export.crawl_events.reset_events", lambda: None)
+    monkeypatch.setattr("src.export.crawl_events.emit_event", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("src.storage.manager.StorageManager", lambda **_kwargs: SimpleNamespace(load_config=lambda: {}))
+
+    class EmptyOrchestrator:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        async def run(self, **_kwargs):
+            return False
+
+    monkeypatch.setattr("src.orchestrator.HorizonOrchestrator", EmptyOrchestrator)
+    previous_directory = Path.cwd()
+    try:
+        with pytest.raises(runner.RunnerError, match="没有抓取到新内容"):
+            runner.run_pipeline()
+    finally:
+        os.chdir(previous_directory)
+
+    assert json.loads(old_brief.read_text(encoding="utf-8"))["date"] == "2026-01-01"
+    assert json.loads(runner.RUN_STATUS_PATH.read_text(encoding="utf-8"))["ok"] is False
+
+
+def test_macos_unschedule_keeps_task_file_when_bootout_fails(tmp_path, monkeypatch):
+    runner, _secrets = load_runner(tmp_path, monkeypatch)
+    runner.LAUNCH_AGENT_PATH = tmp_path / "com.signalweb.daily.plist"
+    runner.LAUNCH_AGENT_PATH.write_text("existing task", encoding="utf-8")
+    monkeypatch.setattr(runner.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(runner.os, "getuid", lambda: 501, raising=False)
+    monkeypatch.setattr(runner.subprocess, "run", lambda *_args, **_kwargs:
+                        SimpleNamespace(returncode=1, stderr="bootout denied", stdout=""))
+
+    with pytest.raises(runner.RunnerError, match="bootout denied"):
+        runner.unregister_task()
+
+    assert runner.LAUNCH_AGENT_PATH.exists()

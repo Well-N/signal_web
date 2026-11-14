@@ -1,5 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { spawn } = require("node:child_process");
+const { randomBytes } = require("node:crypto");
+const net = require("node:net");
 const {
   existsSync,
   mkdirSync,
@@ -13,8 +15,9 @@ const path = require("node:path");
 app.setName("SignalWeb");
 
 const isDev = !app.isPackaged;
-const port = isDev ? 3001 : 31789;
-const baseUrl = "http://127.0.0.1:" + port;
+const instanceToken = randomBytes(32).toString("hex");
+let port;
+let baseUrl;
 const webDir = isDev
   ? path.resolve(__dirname, "..", "web")
   : path.join(process.resourcesPath, "web");
@@ -48,6 +51,30 @@ function prepareInstalledData() {
 
 let serverProcess = null;
 let mainWindow = null;
+
+function localPort() {
+  const configured = process.env.SIGNALWEB_PORT;
+  if (configured !== undefined) {
+    const value = Number(configured);
+    if (!Number.isInteger(value) || value < 1 || value > 65535) {
+      throw new Error("SIGNALWEB_PORT 必须是 1 到 65535 的端口号");
+    }
+    return Promise.resolve(value);
+  }
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        reject(new Error("无法分配本地服务端口"));
+        return;
+      }
+      server.close((error) => error ? reject(error) : resolve(address.port));
+    });
+  });
+}
 
 function startupArgs() {
   return process.platform === "win32" && isDev ? [path.resolve(__dirname)] : [];
@@ -126,8 +153,12 @@ ipcMain.handle("signalweb:set-startup", (_event, enabled) => {
 
 async function isServerReady() {
   try {
-    const response = await fetch(baseUrl + "/api/setup", { cache: "no-store" });
-    return response.ok;
+    const response = await fetch(baseUrl + "/api/health", {
+      cache: "no-store",
+      headers: { "x-signalweb-instance-token": instanceToken },
+      signal: AbortSignal.timeout(2000),
+    });
+    return response.status === 204;
   } catch {
     return false;
   }
@@ -136,24 +167,32 @@ async function isServerReady() {
 async function waitForServer() {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     if (await isServerReady()) return true;
+    if (serverProcess && serverProcess.exitCode !== null) {
+      throw new Error("本地 Web 服务已退出，请查看启动日志");
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return false;
 }
 
 async function startServer() {
-  if (await isServerReady()) return;
+  port = await localPort();
+  baseUrl = "http://127.0.0.1:" + port;
   if (isDev) {
     const builtWeb = existsSync(path.join(webDir, ".next", "BUILD_ID"));
     const serveBuilt = builtWeb && process.env.SIGNALWEB_DEV_WEB !== "1";
     serverProcess = spawn(
       process.platform === "win32" ? "npm.cmd" : "npm",
       serveBuilt
-        ? ["start", "--", "-p", String(port)]
-        : ["run", "dev", "--", "--port", String(port)],
+        ? ["start", "--", "-p", String(port), "-H", "127.0.0.1"]
+        : ["run", "dev", "--", "--port", String(port), "--hostname", "127.0.0.1"],
       {
         cwd: webDir,
-        env: { ...process.env, SIGNALWEB_DEMO: process.env.SIGNALWEB_DEMO ?? "0" },
+        env: {
+          ...process.env,
+          SIGNALWEB_DEMO: process.env.SIGNALWEB_DEMO ?? "0",
+          SIGNALWEB_INSTANCE_TOKEN: instanceToken,
+        },
         windowsHide: true,
         stdio: "ignore",
         shell: process.platform === "win32",
@@ -183,6 +222,7 @@ async function startServer() {
           : { SIGNALWEB_PYTHON: python }),
         SIGNALWEB_DATA_DIR: path.join(packagedPipelineDir, "data", "export"),
         SIGNALWEB_DEMO: "0",
+        SIGNALWEB_INSTANCE_TOKEN: instanceToken,
       },
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],

@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { assertLocalPost } from "@/lib/json-request";
 import { runnerCommand } from "@/lib/runner-command";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +89,15 @@ function launchRun(root: string) {
   });
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  try {
+    assertLocalPost(request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "请求来源无效" },
+      { status: 403 },
+    );
+  }
   const root = pipelineDir();
   if (launchingRun) {
     return NextResponse.json({ error: "已有日报任务正在启动" }, { status: 409 });

@@ -177,7 +177,7 @@ def test_native_run_treats_all_success_empty_as_no_content(monkeypatch) -> None:
 
     monkeypatch.setattr(orchestrator, "fetch_all_sources", fetch_all_sources)
 
-    asyncio.run(orchestrator.run())
+    assert asyncio.run(orchestrator.run()) is False
 
     send_failure.assert_not_awaited()
 

@@ -218,6 +218,7 @@ export default function SetupPage() {
   const [startupBusy, setStartupBusy] = useState(false);
   const deliveryToggleBusy = useRef(false);
   const headersTouched = useRef(false);
+  const pendingRunStartedAt = useRef<number | null>(null);
 
   async function loadStatus() {
     try {
@@ -226,6 +227,10 @@ export default function SetupPage() {
       if (payload.status) {
         setRunner(payload.status);
         const statusRun = payload.status.last_run;
+        const pending = pendingRunStartedAt.current;
+        const recordedStart = statusRun?.started_at ? Date.parse(statusRun.started_at) : NaN;
+        const currentRun = pending !== null && Number.isFinite(recordedStart)
+          && recordedStart >= pending - 1_000;
         if (statusRun?.started_at && !statusRun.finished_at && !statusRun.error) {
           const statusStartedAt = Date.parse(statusRun.started_at);
           setRunStartedAt((current) =>
@@ -234,7 +239,20 @@ export default function SetupPage() {
           setPolling(true);
         } else if (payload.status.run_active) {
           setPolling(true);
+        } else if (currentRun && statusRun?.finished_at) {
+          pendingRunStartedAt.current = null;
+          setPolling(false);
+          setRunStartedAt(null);
+          setRunProgress({
+            state: statusRun.ok ? "finished" : "failed",
+            stage: statusRun.ok ? "finished" : "failed",
+            percent: 100,
+            error: statusRun.error,
+          });
+        } else if (pending !== null && Date.now() - pending < 15_000) {
+          setPolling(true);
         } else if (!payload.status.run_active) {
+          pendingRunStartedAt.current = null;
           setPolling(false);
           setRunStartedAt(null);
           setRunProgress((current) =>
@@ -384,6 +402,7 @@ export default function SetupPage() {
         if (!current) return;
         setRunProgress(payload);
         if (payload.state === "finished" || payload.state === "failed") {
+          pendingRunStartedAt.current = null;
           setPolling(false);
           setRunStartedAt(null);
           if (payload.state === "failed") setError(payload.error || "后台运行失败");
@@ -402,6 +421,7 @@ export default function SetupPage() {
   }, [polling, runStartedAt]);
 
   async function save() {
+    const requestedAt = Date.now();
     setSaving(true);
     setError("");
     setMessage("");
@@ -435,10 +455,12 @@ export default function SetupPage() {
       setHeaders("");
       headersTouched.current = false;
       if (payload.run_started === false) {
+        pendingRunStartedAt.current = null;
         setError("配置已保存，但首次抓取未能启动：" + String(payload.run_error || "未知原因"));
       } else {
         setMessage("配置已保存，每日任务已注册，首次抓取正在后台开始。");
-        setRunStartedAt(Date.now());
+        pendingRunStartedAt.current = requestedAt;
+        setRunStartedAt(pendingRunStartedAt.current);
         setRunProgress({ state: "running", stage: "starting", percent: 2 });
         setPolling(true);
       }
@@ -452,6 +474,7 @@ export default function SetupPage() {
 
   async function runNow() {
     if (runStarting || polling) return;
+    const requestedAt = Date.now();
     setError("");
     setMessage("");
     setRunStarting(true);
@@ -460,10 +483,12 @@ export default function SetupPage() {
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "启动失败");
       setMessage("已启动一次后台抓取，状态会自动刷新。");
-      setRunStartedAt(Date.now());
+      pendingRunStartedAt.current = requestedAt;
+      setRunStartedAt(pendingRunStartedAt.current);
       setRunProgress({ state: "running", stage: "starting", percent: 2 });
       setPolling(true);
     } catch (caught) {
+      pendingRunStartedAt.current = null;
       setError(caught instanceof Error ? caught.message : "启动失败");
       setPolling(false);
       setRunProgress({ state: "failed", stage: "failed", percent: 100 });

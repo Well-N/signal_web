@@ -1,6 +1,7 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/json-request";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -142,9 +143,12 @@ function clampInt(value: unknown, min: number, max: number, fallback: number) {
 export async function POST(request: Request) {
   let payload: Record<string, unknown>;
   try {
-    payload = (await request.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ ok: false, error: "请求不是有效 JSON" }, { status: 400 });
+    payload = await readJsonObject(request);
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "请求格式错误" },
+      { status: 400 },
+    );
   }
 
   const incomingHn = (payload.hackernews ?? {}) as Record<string, unknown>;

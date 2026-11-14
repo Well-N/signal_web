@@ -21,6 +21,7 @@ async function main() {
       SIGNALWEB_START_PATH: "/",
       SIGNALWEB_SCREENSHOT_PATH: screenshot,
       SIGNALWEB_DEMO: "0",
+      SIGNALWEB_PORT: "31789",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

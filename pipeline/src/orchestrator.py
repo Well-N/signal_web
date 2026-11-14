@@ -241,7 +241,7 @@ class HorizonOrchestrator:
         """Share one client and account selection across the run's AI stages."""
         return create_ai_client(self.config.ai)
 
-    async def run(self, force_hours: int = None) -> None:
+    async def run(self, force_hours: int = None) -> bool:
         """Execute the complete workflow.
 
         Args:
@@ -281,7 +281,7 @@ class HorizonOrchestrator:
 
             if not all_items:
                 self.console.print("[yellow]No new content found. Exiting.[/yellow]")
-                return
+                return False
 
             # 3. Merge cross-source duplicates (same URL from different sources)
             merged_items = self.merge_cross_source_duplicates(all_items)
@@ -434,6 +434,8 @@ class HorizonOrchestrator:
                         f"   {self.icons['detail']} {provider}: {u.total} tokens "
                         f"(in: {u.input_tokens}, out: {u.output_tokens})"
                     )
+
+            return True
 
         except Exception as e:
             self.console.print(

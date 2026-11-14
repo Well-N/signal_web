@@ -36,6 +36,7 @@ async function main() {
     SIGNALWEB_PYTHON: path.join(resources, "python", "python.exe"),
     SIGNALWEB_DATA_DIR: path.join(pipeline, "data", "export"),
     SIGNALWEB_DEMO: "0",
+    SIGNALWEB_INSTANCE_TOKEN: "signalweb-package-smoke",
   };
   delete env.PYTHONPATH;
   delete env.PYTHONHOME;
@@ -73,6 +74,18 @@ print("Packaged collection imports and Chinese word cloud: passed")
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   if (!ready) throw new Error(`Packaged setup did not become ready: ${logs}`);
+  const health = await fetch(base + "/api/health", {
+    headers: { "x-signalweb-instance-token": env.SIGNALWEB_INSTANCE_TOKEN },
+  });
+  if (health.status !== 204) throw new Error(`Packaged service identity failed: ${health.status}`);
+  const denied = await fetch(base + "/api/setup/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://untrusted.example" },
+    body: JSON.stringify({ endpoint: "https://example.invalid/v1", model: "" }),
+  });
+  if (denied.status !== 400 || !(await denied.json()).error.includes("只接受来自本机应用页面")) {
+    throw new Error("Packaged server accepted a cross-origin settings request");
+  }
   for (const route of ["/setup", "/api/setup", "/api/sources", "/api/crawl/events"]) {
     const response = await fetch(base + route);
     if (!response.ok) throw new Error(`${route} failed: ${response.status} ${await response.text()}`);
