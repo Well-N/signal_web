@@ -103,6 +103,9 @@ jobs:
           cd ..
           npm ci --prefix web
           npm ci --prefix desktop
+      - name: Verify PDF CJK font registration
+        run: |
+          python -c "import sys; sys.path.insert(0, 'pipeline'); from src.report import pdf; from reportlab.pdfbase import pdfmetrics; pdf._register_fonts(); assert pdf.FONT_SOURCE != 'STSong-Light', 'no system CJK font accepted'; assert 'CJK-Bold' in pdfmetrics.getRegisteredFontNames(), 'bold CJK face missing'; assert pdfmetrics.getFont('CJK').stringWidth('中文日报信号', 10) > 0; print('CJK font:', pdf.FONT_SOURCE)"
       - name: Build macOS package
         env:
           SIGNALWEB_BUILD_PYTHON: python

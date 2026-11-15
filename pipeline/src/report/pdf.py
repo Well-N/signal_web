@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -247,52 +248,111 @@ PROFILE_LABELS = {
 }
 
 
+CJK_PROBE = "中文日报信号"
+FONT_SOURCE = ""
+_BOLD_HINTS = ("bold", "semibold", "demibold", "heavy", "black", "w6", "w7", "w8", "w9")
+_LIGHT_HINTS = ("light", "thin")
+
+
+def _supports_cjk(font: TTFont) -> bool:
+    """Return True only when the face really carries Chinese glyphs."""
+    char_map = getattr(getattr(font, "face", None), "charToGlyph", None)
+    if not isinstance(char_map, dict) or not char_map:
+        return False
+    return all(char_map.get(ord(char), 0) for char in CJK_PROBE)
+
+
+def _face_weight(font: TTFont, *, prefer_bold: bool) -> int:
+    face_name = str(getattr(font.face, "name", "")).lower()
+    if prefer_bold:
+        return sum(hint in face_name for hint in _BOLD_HINTS)
+    return -sum(hint in face_name for hint in _LIGHT_HINTS)
+
+
+def _register_face(
+    name: str, paths: list[Path], *, prefer_bold: bool = False
+) -> tuple[Path, int] | None:
+    """Register the first readable face that can render Chinese.
+
+    Font files reported by the OS are not guaranteed to parse: macOS ships
+    PingFang as a collection, and reportlab rejects some of those faces. Each
+    candidate is therefore opened, checked for Chinese glyphs, and only then
+    registered, so one unusable file never aborts PDF export.
+    """
+    for path in paths:
+        options: list[tuple[int, int, TTFont]] = []
+        for index in range(12):
+            try:
+                font = TTFont(name, str(path), subfontIndex=index)
+            except Exception:
+                break
+            if not _supports_cjk(font):
+                continue
+            options.append((_face_weight(font, prefer_bold=prefer_bold), -index, font))
+        options.sort(key=lambda option: (option[0], option[1]), reverse=True)
+        for _weight, _order, font in options:
+            try:
+                pdfmetrics.registerFont(font)
+            except Exception:
+                continue
+            return path, -1 * _order
+    return None
+
+
+def _cjk_font_paths() -> list[Path]:
+    windows_fonts = Path(os.environ.get("WINDIR") or r"C:\Windows") / "Fonts"
+    ordered = [
+        windows_fonts / "msyh.ttc",
+        windows_fonts / "msyh.ttf",
+        windows_fonts / "simhei.ttf",
+        Path("/System/Library/Fonts/PingFang.ttc"),
+        Path("/System/Library/Fonts/Hiragino Sans GB.ttc"),
+        Path("/System/Library/Fonts/STHeiti Medium.ttc"),
+        Path("/System/Library/Fonts/STHeiti Light.ttc"),
+        Path("/Library/Fonts/Arial Unicode.ttf"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+    ]
+    return [path for path in ordered if path.exists()]
+
+
 def _register_fonts() -> None:
     """Register one CJK face and the Latin editorial faces once."""
+    global FONT_SOURCE
     if "CJK" in pdfmetrics.getRegisteredFontNames():
         return
 
-    candidates: list[tuple[Path, int]] = []
-    if Path("C:\\Windows\\Fonts\\msyh.ttc").exists():
-        candidates.append((Path("C:\\Windows\\Fonts\\msyh.ttc"), 0))
-    if Path("/System/Library/Fonts/PingFang.ttc").exists():
-        candidates.append((Path("/System/Library/Fonts/PingFang.ttc"), 0))
-    if Path("/System/Library/Fonts/Hiragino Sans GB.ttc").exists():
-        candidates.append((Path("/System/Library/Fonts/Hiragino Sans GB.ttc"), 0))
-    if Path("/System/Library/Fonts/STHeiti Light.ttc").exists():
-        candidates.append((Path("/System/Library/Fonts/STHeiti Light.ttc"), 0))
-    for path in (
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-    ):
-        if Path(path).exists():
-            candidates.append((Path(path), 0))
+    candidates = _cjk_font_paths()
+    windows_fonts = Path(os.environ.get("WINDIR") or r"C:\Windows") / "Fonts"
+    bold_candidates = [path for path in (windows_fonts / "msyhbd.ttc",) if path.exists()]
 
-    regular: str | None = None
-    for path, index in candidates:
-        try:
-            pdfmetrics.registerFont(TTFont("CJK", str(path), subfontIndex=index))
-            regular = "CJK"
-            break
-        except Exception:
-            continue
-    if regular is None:
-        # CID fallback is still a real CJK face, not invented data.
+    regular_choice = _register_face("CJK", candidates)
+    if regular_choice is None:
+        # Last resort: a real CJK CID face that ships with reportlab.
         pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
         regular = "STSong-Light"
+        FONT_SOURCE = "STSong-Light"
+    else:
+        regular = "CJK"
+        FONT_SOURCE = f"{regular_choice[0]}#{regular_choice[1]}"
 
-    bold_path = Path("C:\\Windows\\Fonts\\msyhbd.ttc")
-    if bold_path.exists():
+    bold_choice = _register_face("CJK-Bold", bold_candidates + candidates, prefer_bold=True)
+    if bold_choice is not None:
+        bold = "CJK-Bold"
+    elif regular_choice is not None:
+        # Reuse the regular face so headings still render, just unweighted.
+        path, index = regular_choice
         try:
-            pdfmetrics.registerFont(TTFont("CJK-Bold", str(bold_path), subfontIndex=0))
+            pdfmetrics.registerFont(TTFont("CJK-Bold", str(path), subfontIndex=index))
+            bold = "CJK-Bold"
         except Exception:
-            pdfmetrics.registerFont(TTFont("CJK-Bold", str(bold_path)))
-    elif candidates:
-        pdfmetrics.registerFont(TTFont("CJK-Bold", str(candidates[0][0]), subfontIndex=candidates[0][1]))
+            bold = regular
     else:
         pdfmetrics.registerFont(UnicodeCIDFont("CJK-Bold"))
+        bold = "CJK-Bold"
+
     pdfmetrics.registerFontFamily(
-        "CJK", normal=regular, bold="CJK-Bold", italic=regular, boldItalic="CJK-Bold"
+        "CJK", normal=regular, bold=bold, italic=regular, boldItalic=bold
     )
     pdfmetrics.registerFontFamily(
         "EditorialSerif",

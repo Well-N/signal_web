@@ -1,6 +1,6 @@
 {
   "name": "signalweb-desktop",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "织讯 SignalWeb desktop shell",
   "main": "main.js",
   "scripts": {

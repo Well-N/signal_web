@@ -51,7 +51,7 @@ Windows x64 安装包构建：
     cd F:\godot\ai-news-radar\desktop
     npm run dist:win
 
-安装文件输出到 `desktop/dist/SignalWeb-Setup-0.1.6-x64.exe`。安装向导提供欢迎页、安装范围、安装位置、“创建桌面快捷方式”复选框、安装进度和完成页。运行环境随安装包提供，终端用户无需安装 Node.js、Python 或开发依赖。
+安装文件输出到 `desktop/dist/SignalWeb-Setup-0.1.7-x64.exe`。安装向导提供欢迎页、安装范围、安装位置、“创建桌面快捷方式”复选框、安装进度和完成页。运行环境随安装包提供，终端用户无需安装 Node.js、Python 或开发依赖。
 
 macOS 测试包由 GitHub Actions 的 Mac 构建机生成，下载方法见 [macOS 云端构建](docs/18-MACOS-CLOUD-BUILD.md)。
 
@@ -67,7 +67,7 @@ macOS 测试包由 GitHub Actions 的 Mac 构建机生成，下载方法见 [mac
 
 每日任务生成 latest.json 后会自动生成 PDF 并发送摘要通知。也可以点「立即导出今日 PDF」用当前数据重新生成，不触发 AI 抓取。四种 PDF 风格为：网格档案、暗房、手作工坊、孔版印刷。PDF 默认保存到文档目录下的 `SignalWeb Reports`，文件名包含日期和风格。
 
-PDF 生成依赖 `reportlab`，已加入 `pipeline/pyproject.toml`。Windows 使用 Microsoft YaHei，macOS 使用 PingFang/Heiti 字体；缺少中文字体时会在运行状态里明确报错。
+PDF 生成依赖 `reportlab`，已加入 `pipeline/pyproject.toml`。字体会按顺序尝试 Microsoft YaHei、PingFang、Hiragino Sans GB、Heiti 和 Noto，逐个验证确实包含中文字形后才采用，加粗优先选用同一字体集合里的 Bold/Semibold 字面；全部不可用时改用 reportlab 内置的 STSong 中文字体，因此单个字体文件损坏不会中断 PDF 导出。
 
 ## 当前目录
 
