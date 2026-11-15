@@ -470,6 +470,13 @@ def register_macos_task(daily_time: str) -> dict[str, Any]:
     LAUNCH_AGENT_PATH.parent.mkdir(parents=True, exist_ok=True)
     LAUNCH_AGENT_PATH.write_text(launch_agent_xml(daily_time), encoding="utf-8")
     uid = os.getuid()
+    # Unload any previous copy first so a changed time actually takes effect.
+    subprocess.run(
+        ["launchctl", "bootout", "gui/" + str(uid), str(LAUNCH_AGENT_PATH)],
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
     bootstrap = subprocess.run(
         ["launchctl", "bootstrap", "gui/" + str(uid), str(LAUNCH_AGENT_PATH)],
         capture_output=True,
@@ -488,6 +495,17 @@ def register_macos_task(daily_time: str) -> dict[str, Any]:
                 "注册 macOS LaunchAgent 失败："
                 + (bootstrap.stderr or load.stderr or "unknown error").strip()
             )
+    verify = subprocess.run(
+        ["launchctl", "print", "gui/" + str(uid) + "/com.signalweb.daily"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if verify.returncode != 0:
+        raise RunnerError(
+            "LaunchAgent 已写入但系统没有加载它："
+            + (verify.stderr or verify.stdout or "unknown error").strip()
+        )
     return {"platform": "macos", "task": str(LAUNCH_AGENT_PATH), "time": daily_time}
 
 
@@ -534,9 +552,16 @@ def unregister_task() -> dict[str, Any]:
             timeout=20,
         )
         if completed.returncode != 0:
-            raise RunnerError(
-                "取消 macOS 每日任务失败：" + (completed.stderr or completed.stdout).strip()
+            detail = (completed.stderr or completed.stdout or "").strip()
+            lowered = detail.lower()
+            # bootout exits non-zero when the agent is not loaded; the file
+            # still has to be removed so the task stays disabled.
+            already_stopped = any(
+                marker in lowered
+                for marker in ("no such process", "could not find", "not loaded")
             )
+            if not already_stopped:
+                raise RunnerError("取消 macOS 每日任务失败：" + detail)
         LAUNCH_AGENT_PATH.unlink()
         return {"platform": "macos", "removed": True}
     return {"platform": platform.system().lower(), "removed": False}

@@ -194,3 +194,60 @@ def test_macos_unschedule_keeps_task_file_when_bootout_fails(tmp_path, monkeypat
         runner.unregister_task()
 
     assert runner.LAUNCH_AGENT_PATH.exists()
+
+
+def test_macos_unschedule_removes_task_when_agent_was_not_loaded(tmp_path, monkeypatch):
+    runner, _secrets = load_runner(tmp_path, monkeypatch)
+    runner.LAUNCH_AGENT_PATH = tmp_path / "com.signalweb.daily.plist"
+    runner.LAUNCH_AGENT_PATH.write_text("existing task", encoding="utf-8")
+    monkeypatch.setattr(runner.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(runner.os, "getuid", lambda: 501, raising=False)
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=3, stderr="Boot-out failed: 3: No such process", stdout=""
+        ),
+    )
+
+    assert runner.unregister_task()["removed"] is True
+    assert not runner.LAUNCH_AGENT_PATH.exists()
+
+
+def test_macos_register_reloads_previous_agent_and_verifies(tmp_path, monkeypatch):
+    runner, _secrets = load_runner(tmp_path, monkeypatch)
+    runner.LAUNCH_AGENT_PATH = tmp_path / "com.signalweb.daily.plist"
+    monkeypatch.setattr(runner.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(runner.os, "getuid", lambda: 501, raising=False)
+    calls: list[str] = []
+
+    def fake_run(args, **_kwargs):
+        calls.append(args[1])
+        if args[1] == "bootstrap":
+            return SimpleNamespace(returncode=5, stderr="already loaded", stdout="")
+        return SimpleNamespace(returncode=0, stderr="", stdout="state = running")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    result = runner.register_macos_task("07:30")
+
+    assert result["time"] == "07:30"
+    assert calls[:3] == ["bootout", "bootstrap", "load"]
+    assert "print" in calls
+
+
+def test_macos_register_fails_when_agent_did_not_load(tmp_path, monkeypatch):
+    runner, _secrets = load_runner(tmp_path, monkeypatch)
+    runner.LAUNCH_AGENT_PATH = tmp_path / "com.signalweb.daily.plist"
+    monkeypatch.setattr(runner.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(runner.os, "getuid", lambda: 501, raising=False)
+
+    def fake_run(args, **_kwargs):
+        if args[1] == "print":
+            return SimpleNamespace(returncode=1, stderr="Could not find service", stdout="")
+        return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+
+    with pytest.raises(runner.RunnerError, match="没有加载"):
+        runner.register_macos_task("07:30")
