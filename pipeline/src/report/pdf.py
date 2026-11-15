@@ -316,6 +316,16 @@ def _cjk_font_paths() -> list[Path]:
     return [path for path in ordered if path.exists()]
 
 
+class _CidAlias(UnicodeCIDFont):
+    """A reportlab CID face exposed under an app-specific font name."""
+
+    def __init__(self, face: str, name: str) -> None:
+        super().__init__(face)
+        # CIDFont.addObjects keys the document font map by ``self.name``.
+        self.name = name
+        self.fontName = name
+
+
 def _register_fonts() -> None:
     """Register one CJK face and the Latin editorial faces once."""
     global FONT_SOURCE
@@ -329,7 +339,8 @@ def _register_fonts() -> None:
     regular_choice = _register_face("CJK", candidates)
     if regular_choice is None:
         # Last resort: a real CJK CID face that ships with reportlab.
-        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+        if "STSong-Light" not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
         regular = "STSong-Light"
         FONT_SOURCE = "STSong-Light"
     else:
@@ -348,7 +359,7 @@ def _register_fonts() -> None:
         except Exception:
             bold = regular
     else:
-        pdfmetrics.registerFont(UnicodeCIDFont("CJK-Bold"))
+        pdfmetrics.registerFont(_CidAlias("STSong-Light", "CJK-Bold"))
         bold = "CJK-Bold"
 
     pdfmetrics.registerFontFamily(
